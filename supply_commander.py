@@ -1,97 +1,58 @@
+import telnetlib
 import logging
+import pprint
 
-from telnet_client import TelnetClientFactory, TelnetClient
+log = logging.Logger('VCUHIL')
+log.setLevel('DEBUG')
 
-from twisted.protocols.basic import LineReceiver
-from twisted.internet import defer, task, threads
-from twisted.internet.protocol import ReconnectingClientFactory
-from twisted.internet.defer import DeferredQueue
-from twisted.conch.telnet import StatefulTelnetProtocol, TelnetTransport
-from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
+def _trim_string(string):
+        return str(string).split('\\r\\n')[0]
 
-log = logging.getLogger('VCUHIL')
-log.setLevel(logging.DEBUG)
-
-
-TIMEOUT = 30.0
-
-class TelnetConnectionError(Exception):
-    pass
-
-
-
-class SorensenXPF6020DPCommand(object):
-    def __init__(self, command, response=True):
-        self.connection_deferred = defer.Deferred()
-
-        self.command_deferred = defer.Deferred()
-
-        self.response_required = response
-
-        if response:
-            self.response_deferred = defer.Deferred()
-
-        self.transport = None
-        self.command = command
-
-    def connect(self, telnet_factory):
-        def check_connection_state(transport):
-            transport.protocol.connected_deferred = self.connection_deferred
-            return transport
-
-        def connection_failed(reason):
-            logging.info(f'Connection Failed for reason: {reason}')
-            raise TelnetConnectionError(reason)
-
-        # Start connection to telnet server
-        self.connection_deferred = endpoint.connect(telnet_factory)
-
-        # first deferred, fired on connection
-        self.connection_deferred.addCallback(check_connection_state)
-        self.connection_deferred.addErrback(connection_failed)
-        self.connection_deferred.addCallback(self.start_protocol)
-        self.connection_deferred.addCallback(self.send_command)
-
-
-    def start_protocol(self, protocol):
-        self.transport = protocol.protocol
-        self.transport.command_deferred = self.command_deferred
-        self.transport.response_required = self.response_required
-        if self.response_required:
-            self.transport.response_deferred = self.response_deferred
-
-    def send_command(self, _):
-        self.transport.send_command(self.command)
-
-    @property
-    def response(self):
-        if self.response_required:
-            return self.response_deferred
-        else:
-            return None
 
 class SorensenXPF6020DP(object):
-    def __init__(self, endpoint):
-        self._endpoint = endpoint
-        telnet_factory = TelnetClientFactory()
-        telnet_factory.protocol = TelnetClient
-        self._telnet_factory = telnet_factory
+    def __init__(self, host, port):
+        self._host = host
+        self._port = port
+        self.psu_tel = None
+
+    def connect(self):
+        self.psu_tel = telnetlib.Telnet('psu-leonardo', 9221)
+
+    def readback(self):
+        return {
+            1: {
+                'meas_voltage':self.voltage_channel1_meas,
+                'meas_current':self.current_channel1_meas,
+                'set_voltage':self.voltage_channel1,
+                'set_current':self.current_channel1,
+                'output_enabled':self.output_channel1,
+            },
+            2: {
+                'meas_voltage':self.voltage_channel2_meas,
+                'meas_current':self.current_channel2_meas,
+                'set_voltage':self.voltage_channel2,
+                'set_current':self.current_channel2,
+                'output_enabled':self.output_channel2,
+            }
+        }
+
+    def close(self):
+        self.psu_tel.close()
 
     def _generic_command_response(self, command):
-        cmd = SorensenXPF6020DPCommand(command)
-        cmd.connect(self._telnet_factory)
-        return cmd.response
+        self._generic_command(command)
+        response = self.psu_tel.read_until(b'\r\n')
+        return _trim_string(response)
 
     def _generic_command(self, command):
-        cmd = SorensenXPF6020DPCommand(command, response=False)
-        cmd.connect(self._telnet_factory)
+        self.psu_tel.write(f'{command}\r\n'.encode('ascii'))
 
     def identify(self):
-        return self._generic_command_response('*IDN?')
+        return self._generic_command_response('*IDN?')[2:]
 
     @property
     def voltage_channel1(self):
-        return self._generic_command_response(f'V1?')
+        return float(self._generic_command_response(f'V1?')[5:])
 
     @voltage_channel1.setter
     def voltage_channel1(self, voltage):
@@ -99,7 +60,7 @@ class SorensenXPF6020DP(object):
 
     @property
     def voltage_channel2(self):
-        return self._generic_command_response(f'V2?')
+        return float(self._generic_command_response(f'V2?')[5:])
 
     @voltage_channel2.setter
     def voltage_channel2(self, voltage):
@@ -107,7 +68,7 @@ class SorensenXPF6020DP(object):
 
     @property
     def current_channel1(self):
-        return self._generic_command_response(f'I1?')
+        return float(self._generic_command_response(f'I1?')[5:])
 
     @current_channel1.setter
     def current_channel1(self, current):
@@ -115,7 +76,7 @@ class SorensenXPF6020DP(object):
 
     @property
     def current_channel2(self):
-        return self._generic_command_response(f'I2?')
+        return float(self._generic_command_response(f'I2?')[5:])
 
     @current_channel2.setter
     def current_channel2(self, current):
@@ -123,23 +84,23 @@ class SorensenXPF6020DP(object):
 
     @property
     def voltage_channel1_meas(self):
-        return self._generic_command_response(f'V1O?')
+        return float(self._generic_command_response(f'V1O?')[2:-1])
 
     @property
     def voltage_channel2_meas(self):
-        return self._generic_command_response(f'V2O?')
+        return float(self._generic_command_response(f'V2O?')[2:-1])
 
     @property
     def current_channel1_meas(self):
-        return self._generic_command_response(f'I1O?')
+        return float(self._generic_command_response(f'I1O?')[2:-1])
 
     @property
     def current_channel2_meas(self):
-        return self._generic_command_response(f'I2O?')
+        return float(self._generic_command_response(f'I2O?')[2:-1])
 
     @property
     def output_channel1(self):
-        return self._generic_command_response('OP1?')
+        return bool(self._generic_command_response('OP1?')[2:])
 
     @output_channel1.setter
     def output_channel1(self, boolean):
@@ -147,59 +108,38 @@ class SorensenXPF6020DP(object):
 
     @property
     def output_channel2(self):
-        return self._generic_command_response('OP2?')
+        return bool(self._generic_command_response('OP2?')[2:])
 
     @output_channel2.setter
     def output_channel2(self, boolean):
         self._generic_command(f'OP2 {int(boolean)}')
 
+    def supply_state(self):
+        return pprint.pformat(self.readback())
 
 
 if __name__ == '__main__':
-    logging.basicConfig()
+    import time
+    psu = SorensenXPF6020DP('psu-leonardo', 9221)
+    psu.connect()
+    print(psu.identify())
+    print(psu.supply_state())
+    time.sleep(0.5)
+    psu.voltage_channel1 = 16.0
+    psu.voltage_channel2 = 16.0
+    psu.current_channel1 = 7.0
+    psu.current_channel2 = 7.0
+    psu.output_channel1 = 1
+    psu.output_channel2 = 1
+    time.sleep(1.5)
+    print(psu.supply_state())
+    time.sleep(2)
+    psu.voltage_channel1 = 0
+    psu.voltage_channel2 = 0
+    psu.current_channel1 = 0
+    psu.current_channel2 = 0
+    psu.output_channel1 = 0
+    psu.output_channel2 = 0
+    time.sleep(0.5)
+    psu.close()
 
-    import sys
-    from twisted.internet import reactor
-
-    host = sys.argv[1]
-    port = 9221
-    endpoint = TCP4ClientEndpoint(reactor, host, port, TIMEOUT)
-    psu = SorensenXPF6020DP(endpoint)
-
-    # Identify Power Supply
-    idn_r = psu.identify()
-    idn_r.addCallback(print)
-
-    # Measure voltages and currents
-    v1_r_1 = task.deferLater(reactor, 1, getattr, psu, 'voltage_channel1_meas')
-    v2_r_1 = task.deferLater(reactor, 1.2, getattr, psu, 'voltage_channel2_meas')
-    i1_r_1 = task.deferLater(reactor, 1.4, getattr, psu, 'current_channel1_meas')
-    i2_r_1 = task.deferLater(reactor, 1.6, getattr, psu, 'current_channel2_meas')
-    v1_r_1.addCallback(print)
-    v2_r_1.addCallback(print)
-    i1_r_1.addCallback(print)
-    i2_r_1.addCallback(print)
-
-    # Set Voltage, Currents and Outputs
-    reactor.callLater(1.8, setattr, psu, 'voltage_channel1', 16.0)
-    reactor.callLater(2.0, setattr, psu, 'voltage_channel2', 16.0)
-    reactor.callLater(2.2, setattr, psu, 'current_channel1', 7.0)
-    reactor.callLater(2.4, setattr, psu, 'current_channel2', 7.0)
-    reactor.callLater(2.6, setattr, psu, 'output_channel1', 1)
-    reactor.callLater(2.8, setattr, psu, 'output_channel2', 1)
-
-    # Read voltages and currents measured
-    v1_r_2 = task.deferLater(reactor, 3, getattr, psu, 'voltage_channel1_meas')
-    v2_r_2 = task.deferLater(reactor, 3.2, getattr, psu, 'voltage_channel2_meas')
-    i1_r_2 = task.deferLater(reactor, 3.4, getattr, psu, 'current_channel1_meas')
-    i2_r_2 = task.deferLater(reactor, 3.6, getattr, psu, 'current_channel2_meas')
-    v1_r_2.addCallback(print)
-    v2_r_2.addCallback(print)
-    i1_r_2.addCallback(print)
-    i2_r_2.addCallback(print)
-
-    # Stop reactor after 5 seconds
-    reactor.callLater(5, reactor.stop)
-
-    # Execute Script
-    reactor.run()
