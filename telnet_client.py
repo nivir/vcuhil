@@ -19,6 +19,8 @@ log = logging.getLogger('VCUHIL')
 class TelnetClient(StatefulTelnetProtocol):
     def __init__(self):
         self.command_deferred = None
+        self.response_deferred = None
+        self.response_required = False
 
         self.command = b''
         self.response = b''
@@ -30,7 +32,6 @@ class TelnetClient(StatefulTelnetProtocol):
         Set rawMode since we do not receive the login and password prompt in line mode.
         We return to default line mode when we detect the prompt in the received data stream.
         """
-        print('Telnet client logged in. We are ready for commands')
         self.setLineMode()
 
     def lineReceived(self, line):
@@ -47,30 +48,34 @@ class TelnetClient(StatefulTelnetProtocol):
 
         self.response += line + b'\r\n'
 
-        # start countdown to command done (when reached, consider the output was completely received and close)
-        if not self.done_callback:
-            self.done_callback = reactor.callLater(0.5, self.close)
-        else:
-            self.done_callback.reset(0.5)
+
+        # third deferred, to signal command's output was fully received
+        if self.response_required:
+            self.response_deferred.callback(self.response)
+            # Got response, close connection
+            self.close()
+
+
 
     def send_command(self, command):
         """
         Sends a command via Telnet using line mode
         """
+        log.debug(f'Sent command {command}')
         self.command = f'{command}\r'
         self.command = command.encode()
         self.sendLine(self.command)
+        if not self.response_required:
+            self.close()
 
     def close(self):
         """
         Sends exit to the Telnet server and closes connection.
         Fires the deferred with the command's output.
         """
-        self.sendLine(b'exit')
+        #self.sendLine(b'exit')
         self.factory.transport.loseConnection()
 
-        # third deferred, to signal command's output was fully received
-        self.command_deferred.callback(self.response)
 
 
 class TelnetClientFactory(ReconnectingClientFactory):
