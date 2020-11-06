@@ -7,7 +7,6 @@ verify_ssl = true
 
 [packages]
 transitions = "*"
-twisted = "*"
 
 [requires]
 python_version = "3.9"
