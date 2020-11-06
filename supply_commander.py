@@ -2,7 +2,6 @@ import asyncio
 import telnetlib3
 import logging
 import pprint
-from queue import SimpleQueue as Queue
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
