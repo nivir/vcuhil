@@ -11,7 +11,6 @@ import argparse
 import pprint
 import time
 import sys
-import transitions
 
 CYCLE_TIME = 1
 

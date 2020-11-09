@@ -62,40 +62,27 @@ class HIL(Component):
 
 class VCU(Component):
     states = ['power_off', 'booting', 'idle', 'command', 'recovery']
+    transitions = [
+        {'trigger': 'power_off', 'source':'*', 'dest':'power_off'},
+        {'trigger': 'power_on', 'source': 'power_off', 'dest': 'booting'},
+        {'trigger': 'booted', 'source': 'booting', 'dest': 'idle'},
+        {'trigger': 'cmd', 'source': 'idle', 'dest': 'command'},
+        {'trigger': 'recover', 'source': 'idle', 'dest': 'recovery'},
+        {'trigger': 'reboot', 'source': '*', 'dest': 'booting'},
+        {'trigger': 'cmd_complete', 'source': 'command', 'dest': 'idle'},
+    ]
 
     def __init__(self, name, configs):
         super().__init__(name)
         self.configs = configs
         self.type = 'VCU'
-        self.vcu_machine = Machine(model=self, states=VCU.states, initial='power_off')
-        self._setup_transitions()
+        self.vcu_machine = Machine(model=self, states=VCU.states, transitions=VCU.transitions, initial='power_off')
         self.telemetry = TelemetryKeeper(name)
         self._setup_telemetry()
 
     def _setup_telemetry(self):
         # HIL State
         self.telemetry.add_telemetry_channel(StringTelemetryChannel('vcu_state'))
-
-
-    def _setup_transitions(self):
-        # Can power off VCU at any time
-        self.vcu_machine.add_transition(trigger='power_off', source='*', dest='power_off')
-
-        # Power Off -> Booting machine state
-        self.vcu_machine.add_transition(trigger='power_on', source='power_off', dest='booting')
-
-        # Wait for unit to boot
-        self.vcu_machine.add_transition(trigger='booted', source='booting', dest='idle')
-
-        # Once booted, we can go to command or recovery mode
-        self.vcu_machine.add_transition(trigger='cmd', source='idle', dest='command')
-        self.vcu_machine.add_transition(trigger='recover', source='idle', dest='recovery')
-
-        # Can reboot any time (assume this takes out of recovery mode
-        self.vcu_machine.add_transition(trigger='reboot', source='*', dest='booting')
-
-        # Command Complete, go back to idle
-        self.vcu_machine.add_transition(trigger='cmd_complete', source='command', dest='idle')
 
     async def gather_telemetry(self):
         self.telemetry.telemetry_channels['vcu_state']\
@@ -108,8 +95,11 @@ class VCU(Component):
     async def setup(self, name):
         for config_dev, config_dict in self.configs.items():
             if   'sorensen_psu' in config_dict['type']:
+                # Create a power supply component
                 self.components[config_dev] = PowerSupply(f'{self.name}.psu_{self.name}', SorensenXPF6020DP())
+                # Connect telnet client for power supply to actual physical power supply
                 await self.components[config_dev].client.connect(config_dict['host'], config_dict['port'])
+                # Complete setup for power supply
                 await self.components[config_dev].setup(f'{self.name}.psu_{self.name}')
             elif 'micro' in config_dict['type']:
                 self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
