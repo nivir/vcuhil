@@ -8,9 +8,9 @@ from hilcode.components import VCU, HIL
 import logging
 import asyncio
 import argparse
-import pprint
 import time
 import sys
+import pprint
 
 CYCLE_TIME = 1
 
@@ -22,6 +22,12 @@ log.setLevel(logging.DEBUG)
 
 # Setup
 async def setup(args):
+    """
+    One-time run setup function (before second-by-second execution
+
+    :param args: Arguments from command line
+    :return: State of HIL
+    """
     # Parse Config
     hil = HIL('VCU HIL')
     for vcu_name, vcu_config in VCU_CONFIGS.items():
@@ -54,9 +60,7 @@ async def run(state):
 
     # Acquire Data for next cycle
     await hil.gather_telemetry()
-    telem_str = str(hil.telemetry)
-    print(telem_str)
-    logging.info(telem_str)
+    logging.info(pprint.pformat(hil.telemetry.current_data()))
 
     # Determine actions next cycle
 

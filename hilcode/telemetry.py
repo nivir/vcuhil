@@ -52,5 +52,17 @@ class TelemetryKeeper(object):
             keeper_data += '\n'
         return f'{channel_data}\n{keeper_data}'
 
+    def current_data(self):
+        data = {f'{self.name}.{name}':{
+            'timestamp': x.timestamp,
+            'value': x.value
+        } for name, x in self.telemetry_channels.items()}
+        for tk_name, tk in self.telemetry_keepers.items():
+            tk_data = tk.current_data()
+            #tk_data = {f'{self.name}.{name}':x for name,x in tk_data.items()}
+            data.update(tk_data)
+        return data
+
+
 
 
