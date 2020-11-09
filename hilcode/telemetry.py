@@ -1,4 +1,5 @@
 import time
+import pprint
 
 class TelemetryChannel(object):
     def __init__(self, name):
@@ -44,13 +45,7 @@ class TelemetryKeeper(object):
         self.telemetry_keepers[f'{self.name}.{keeper.name}'] = keeper
 
     def __str__(self):
-        channel_data = '\n'.join([f'{self.name}.{str(x)}' for name,x in self.telemetry_channels.items()])
-        # Append name to each channel in other keepers
-        keeper_data = ''
-        for tk_name, tk in self.telemetry_keepers.items():
-            keeper_data += str(tk)
-            keeper_data += '\n'
-        return f'{channel_data}\n{keeper_data}'
+        return pprint.pformat(self.current_data())
 
     def current_data(self):
         data = {f'{self.name}.{name}':{
@@ -62,6 +57,15 @@ class TelemetryKeeper(object):
             #tk_data = {f'{self.name}.{name}':x for name,x in tk_data.items()}
             data.update(tk_data)
         return data
+
+    def timestamped_data(self):
+        data = self.current_data()
+        return {
+                t_v['timestamp']: {
+                    'name': name,
+                    'value': t_v['value']
+                }
+            for name, t_v in data.items() }
 
 
 

@@ -11,6 +11,8 @@ import argparse
 import time
 import sys
 import pprint
+import pint
+import json
 
 CYCLE_TIME = 1
 
@@ -60,7 +62,20 @@ async def run(state):
 
     # Acquire Data for next cycle
     await hil.gather_telemetry()
-    logging.info(pprint.pformat(hil.telemetry.current_data()))
+    ts_data = hil.telemetry.timestamped_data()
+    ts_data_raw = {}
+    for ts, n_v in ts_data.items():
+        if isinstance(n_v['value'], pint.Quantity):
+            ts_data_raw[ts] = {
+                'name': n_v['name'],
+                'value': n_v['value'].magnitude
+            }
+        else:
+            ts_data_raw[ts] = {
+                'name': n_v['name'],
+                'value': n_v['value']
+            }
+    logging.info(json.dumps(ts_data_raw))
 
     # Determine actions next cycle
 
