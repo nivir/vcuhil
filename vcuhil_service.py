@@ -12,11 +12,13 @@ import argparse
 import abc
 import pprint
 
+CYCLE_TIME = 1
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-log = logging.Logger('')
+log = logging.Logger('VCUHIL_service')
+log.setLevel(logging.DEBUG)
 
 
 class Component(object):
@@ -25,13 +27,15 @@ class Component(object):
         self.components = {}
         self.type = 'Component'
 
-    @abc.abstractmethod
-    def setup(self, name):
+    def setup(self):
         pass
 
     @abc.abstractmethod
     def all_configs(self):
         pass
+
+    async def query_power_status(self):
+        return {name:await comp.query_power_status() for name, comp in self.components.items()}
 
 
 
@@ -48,15 +52,17 @@ class HIL(Component):
         return {n:v for n,v in _config_gen()}
 
     async def setup(self, name):
-        for component_name, component in self.components.items():
+        for component_name, component in self.components.items(): # Grab VCU
             await component.setup(component_name)
-
 
     def __str__(self):
         nl = '\n'
         config = ''.join([f'{x.type} {x_name}{nl}-=CONFIG=-{nl}{str(x)}{nl}{nl}'
                           for x_name,x in  self.components.items()])
         return f"HIL: {self.name}{nl}{config}"
+
+    def get_component(self, name):
+        return self.components[name]
 
 class VCU(Component):
     def __init__(self, name, configs):
@@ -81,8 +87,12 @@ class VCU(Component):
             elif 'vlan' in config_dict['type']:
                 self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
 
+    async def query_power_status(self):
+        return await self.components['psu'].query_state()
+
     def __str__(self):
         return pprint.pformat(self.configs)
+
 
 class PowerSupply(Component):
     def __init__(self, name, client):
@@ -90,16 +100,18 @@ class PowerSupply(Component):
         self.type = 'PowerSupply'
         self.client = client
 
-    async def setup(self, name):
-        print(f'name is {name}')
-        print('configuring')
+    async def query_state(self):
+        return await self.client.supply_state()
 
-    def query_state(self):
+    def power_status(self):
         return self.client.supply_state()
+
+    def all_configs(self):
+        return {}
 
 
 # Setup
-async def setup():
+async def setup(args):
     # Parse Config
     hil = HIL('VCU HIL')
     for vcu_name, vcu_config in VCU_CONFIGS.items():
@@ -109,32 +121,40 @@ async def setup():
     # Setup Components
     await hil.setup('VCU HIL')
 
-    logging.debug(hil)
+    logging.info(hil)
+    logging.info(pprint.pformat(await hil.query_power_status()))
+    logging.info('-=NINJA TURTLES GO=-')
 
     return hil
 
 
 # Loop
-async def run(hil):
-    leonardo = hil.components['leonardo']
-    michalangelo = hil.components['michalangelo']
-    donatello = hil.components['donatello']
-    raphael = hil.components['raphael']
+async def run(setup_out):
+    hil = setup_out
+    comps = hil.components
+    for comp_name,comp in comps.items():
+        if 'VCU' in comp.type:
+            vcu_power_status = await comp.query_power_status()
+            status = \
+                f"VCU: {comp_name}\tCurr1: {vcu_power_status[1]['meas_current']}\tCurr2: {vcu_power_status[2]['meas_current']}"
+            logging.info(status)
+    logging.debug('Tick Tock')
 
-    print('-= LEONARDO =-')
-    print(await leonardo.components['psu'].query_state())
-    print('-= MICHALANGELO =-')
-    print(await michalangelo.components['psu'].query_state())
-    print('-= DONATELLO =-')
-    print(await donatello.components['psu'].query_state())
-    print('-= RAPHAEL =-')
-    print(await raphael.components['psu'].query_state())
-    print('-= NINJA TURTLES GO =-')
+
+async def periodic_run(cycle_time, state):
+    await asyncio.sleep(cycle_time)
+    await run(state)
 
 # Main Function
 async def main(args):
-    args = await setup()
-    return await run(args)
+    state = await setup(args)
+    while True:
+        task = asyncio.create_task(periodic_run(CYCLE_TIME, state))
+        if task.done():
+            state = task.result()
+            continue
+        else:
+            await asyncio.sleep(CYCLE_TIME)
 
 
 # Command Line Interface

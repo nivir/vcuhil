@@ -1,12 +1,8 @@
 import asyncio
 import telnetlib3
 import logging
-import pprint
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M')
-log = logging.Logger('')
+log = logging.Logger('supply_commander')
 
 
 def _trim_string(string):
@@ -109,7 +105,7 @@ class SorensenXPF6020DP(object):
 
     async def supply_state(self):
         logging.debug('Get Supply State')
-        return pprint.pformat(await self.readback())
+        return await self.readback()
 
 async def main():
     # Setup
