@@ -10,7 +10,6 @@ import asyncio
 import argparse
 import time
 import sys
-import pprint
 import pint
 import json
 
@@ -42,7 +41,8 @@ async def setup(args):
 
     return {
         'done': False,
-        'hil': hil
+        'hil': hil,
+        'command': None,
     }
 
 
