@@ -42,7 +42,7 @@ async def setup(args):
     return {
         'done': False,
         'hil': hil,
-        'command': None,
+        'log_filename': args.log_filename,
     }
 
 
@@ -56,7 +56,7 @@ async def run(state):
     """
     # Setup
     hil = state['hil']
-    comps = hil.components
+    log_filename = state['log_filename']
 
     # Send Commands
 
@@ -75,7 +75,8 @@ async def run(state):
                 'name': n_v['name'],
                 'value': n_v['value']
             }
-    logging.info(json.dumps(ts_data_raw))
+    with open(log_filename, 'a') as lf:
+        lf.writeline(json.dumps(ts_data_raw))
 
     # Determine actions next cycle
 
@@ -126,16 +127,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='vcuhil_service',
                                      description='Service to manage VCU HIL on main x86 computer (April).')
     parser.add_argument(
-        '--username',
-        default='baird.hendrix'
-    )
-    parser.add_argument(
-        '--sshhost',
-        default='192.168.1.2'
-    )
-    parser.add_argument(
-        '--portno',
-        default=22
+        '--log_filename',
+        default='log.json'
     )
     args = parser.parse_args()
     try:
