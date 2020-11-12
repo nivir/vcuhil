@@ -5,7 +5,7 @@ import pprint
 from transitions import Machine
 from pint import UnitRegistry
 from hilcode.telemetry import TelemetryKeeper, UnitTelemetryChannel, StringTelemetryChannel, BooleanTelemetryChannel
-
+from hilcode.command import CommandWarning
 
 class Component(object):
     def __init__(self, name):
@@ -166,8 +166,13 @@ class PowerSupply(Component):
         await super().setup(name)
 
     async def command(self, options):
-        func = getattr(self.client, options['command'])
-        return func(options['value'])
+        try:
+            func = getattr(self.client, options['command'])
+            return func(options['value'])
+        except KeyError:
+            raise CommandWarning(f'Command {options} failed.')
+        except AttributeError:
+            raise CommandWarning(f'Command {options} failed.')
 
     async def gather_telemetry(self):
         # Get Power Status

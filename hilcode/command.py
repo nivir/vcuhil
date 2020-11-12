@@ -1,17 +1,19 @@
 from enum import Enum
 import logging
 
+class CommandWarning(RuntimeWarning):
+    pass
+
 
 async def execute_command(state, curr_command):
-    logging.info(str(curr_command))
     if curr_command.operation == Operation.NO_OP:
-        logging.debug(f'NO_OP COMMAND RECIEVED')
         return state
     elif curr_command.operation == Operation.PWR_SUPPLY_CMD or \
         curr_command.operation == Operation.SERIAL_CMD or \
         curr_command.operation == Operation.SSH_CMD or \
         curr_command.operation == Operation.RECOVERY or \
         curr_command.operation == Operation.RESTART:
+        logging.info(str(curr_command))
         return await generic_command(state, curr_command)
     else:
         RuntimeError(f'Operation {curr_command.operation} not recognized.')
@@ -19,7 +21,10 @@ async def execute_command(state, curr_command):
 async def generic_command(state, curr_command):
     # Get component to manipulate
     comp = state['hil'].get_component(curr_command.target)
-    await comp.command(curr_command.options)
+    try:
+        await comp.command(curr_command.options)
+    except CommandWarning:
+        logging.warning(f'FAILED COMMAND {curr_command}')
     # No change to state, so pass back
     return state
 

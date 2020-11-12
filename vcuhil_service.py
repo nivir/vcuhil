@@ -17,7 +17,7 @@ import pprint
 
 CYCLE_TIME = 1
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 log = logging.Logger('VCUHIL_service')
@@ -115,13 +115,19 @@ async def periodic_run(cycle_time, state):
 async def json_server(reader, writer):
     while True:
         data = await reader.readline()
-        message = data.decode()
-        command_options = json.loads(message)
-        cmd = Command(Operation(command_options['operation']), command_options['options'], command_options['target'])
-        await command_queue.put(cmd)
-        data = ['ACK']
-        writer.write(json.dumps(data).encode())
-
+        try:
+            message = data.decode()
+            command_options = json.loads(message)
+            cmd = Command(Operation(command_options['operation']), command_options['options'], command_options['target'])
+            await command_queue.put(cmd)
+            data = ['ACK']
+            writer.write(json.dumps(data).encode())
+        except json.JSONDecodeError:
+            data = ['INVALID JSON']
+            writer.write(json.dumps(data).encode())
+        except KeyError:
+            data = ['INVALID CMD']
+            writer.write(json.dumps(data).encode())
 
 
 # Main Function
