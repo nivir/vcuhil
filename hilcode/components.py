@@ -1,4 +1,5 @@
 from hilcode.supply_commander import SorensenXPF6020DP
+from hilcode.micro_commander import VCUMicroDevice
 import abc
 import pprint
 from transitions import Machine
@@ -28,6 +29,16 @@ class Component(object):
         for _, comp in self.components.items():
             self.telemetry.add_telemetry_keeper(comp.telemetry)
 
+    def get_component(self, name):
+        if '.' in name:
+            tokens = str(name).split('.')
+            context = self
+            for token in tokens:
+                context =  context.get_component(token)
+            return context
+        else:
+            return self.components[name]
+
 
 class HIL(Component):
     states = ['idle', 'flash_vcu']
@@ -56,8 +67,6 @@ class HIL(Component):
                           for x_name,x in  self.components.items()])
         return f"HIL: {self.name}{nl}{config}"
 
-    def get_component(self, name):
-        return self.components[name]
 
 
 class VCU(Component):
@@ -102,7 +111,9 @@ class VCU(Component):
                 # Complete setup for power supply
                 await self.components[config_dev].setup(f'{self.name}.psu_{self.name}')
             elif 'micro' in config_dict['type']:
-                self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
+                self.components[config_dev] = Micro(f'{self.name}.micro_{config_dev}', VCUMicroDevice())
+                await self.components[config_dev].client.connect(config_dict['serial'], baudrate=config_dict['baudrate'])
+                await self.components[config_dev].setup(f'{self.name}.micro_{config_dev}')
             elif 'sga' in config_dict['type']:
                 self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
             elif 'hpa' in config_dict['type']:
@@ -116,6 +127,22 @@ class VCU(Component):
 
     def __str__(self):
         return pprint.pformat(self.configs)
+
+
+class Micro(Component):
+    def __init__(self, name, client):
+        super().__init__(name)
+        self.type = 'Micro'
+        self.client = client
+
+    def all_configs(self):
+        return {}
+
+    async def setup(self, name):
+        await super().setup(name)
+
+    async def command(self, options):
+        return await self.client.command(options['value'])
 
 
 class PowerSupply(Component):
@@ -138,6 +165,8 @@ class PowerSupply(Component):
         self._setup_telemetry(name)
         await super().setup(name)
 
+    async def command(self, options):
+        return await getattr(self.client, options['command'])(options['value'])
 
     async def gather_telemetry(self):
         # Get Power Status

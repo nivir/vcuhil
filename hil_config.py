@@ -57,23 +57,28 @@ VCU_CONFIGS = {
             'hostname': 'vcu-leonardo-sga',
             'odb': 'vcu-leonardo-odb',
             'serial': '/dev/tty_vcu_leonardo_sga',
+            'baudrate': 115200,
         },
         'hpa': {
             'type': 'hpa',
             'hostname': 'vcu-leonardo-hpa',
             'serial': '/dev/tty_vcu_leonardo_hpa',
+            'baudrate': 115200,
         },
         'hia': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_leonardo_hia',
+            'baudrate': 115200,
         },
         'hib': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_leonardo_hib',
+            'baudrate': 115200,
         },
         'lpa': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_leonardo_lpa',
+            'baudrate': 115200,
         },
         'psu': {
             'type': 'sorensen_psu',
@@ -91,23 +96,28 @@ VCU_CONFIGS = {
             'hostname': 'vcu-michalangelo-sga',
             'odb': 'vcu-michalangelo-odb',
             'serial': '/dev/tty_vcu_michalangelo_sga',
+            'baudrate': 115200,
         },
         'hpa': {
             'type': 'hpa',
             'hostname': 'vcu-michalangelo-hpa',
             'serial': '/dev/tty_vcu_michalangelo_hpa',
+            'baudrate': 115200,
         },
         'hia': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_michalangelo_hia',
+            'baudrate': 115200,
         },
         'hib': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_michalangelo_hib',
+            'baudrate': 115200,
         },
         'lpa': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_michalangelo_lpa',
+            'baudrate': 115200,
         },
         'psu': {
             'type': 'sorensen_psu',
@@ -125,23 +135,28 @@ VCU_CONFIGS = {
             'hostname': 'vcu-donatello-sga',
             'odb': 'vcu-donatello-odb',
             'serial': '/dev/tty_vcu_donatello_sga',
+            'baudrate': 115200,
         },
         'hpa': {
             'type': 'hpa',
             'hostname': 'vcu-donatello-hpa',
             'serial': '/dev/tty_vcu_donatello_hpa',
+            'baudrate': 115200,
         },
         'hia': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_donatello_hia',
+            'baudrate': 115200,
         },
         'hib': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_donatello_hib',
+            'baudrate': 115200,
         },
         'lpa': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_donatello_lpa',
+            'baudrate': 115200,
         },
         'psu': {
             'type': 'sorensen_psu',
@@ -159,23 +174,28 @@ VCU_CONFIGS = {
             'hostname': 'vcu-raphael-sga',
             'odb': 'vcu-raphael-odb',
             'serial': '/dev/tty_vcu_raphael_sga',
+            'baudrate': 115200,
         },
         'hpa': {
             'type': 'hpa',
             'hostname': 'vcu-raphael-hpa',
             'serial': '/dev/tty_vcu_raphael_hpa',
+            'baudrate': 115200,
         },
         'hia': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_raphael_hia',
+            'baudrate': 115200,
         },
         'hib': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_raphael_hib',
+            'baudrate': 115200,
         },
         'lpa': {
             'type': 'micro',
             'serial': '/dev/tty_vcu_raphael_lpa',
+            'baudrate': 115200,
         },
         'psu': {
             'type': 'sorensen_psu',

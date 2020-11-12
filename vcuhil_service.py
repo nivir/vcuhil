@@ -5,6 +5,8 @@
 # Imports
 from hil_config import VCU_CONFIGS
 from hilcode.components import VCU, HIL
+from hilcode.command import Command, Operation, execute_command
+import queue
 import logging
 import asyncio
 import argparse
@@ -39,12 +41,15 @@ async def setup(args):
     await hil.setup('VCU HIL')
     logging.info('-=NINJA TURTLES GO=-')
 
+    # Setup Command Queue
+    command_queue = queue.Queue()
+
     return {
         'done': False,
         'hil': hil,
-        'log_filename': args.log_filename,
+        'log_filename': args['log_filename'],
+        'command_queue': command_queue,
     }
-
 
 # Loop (every second)
 async def run(state):
@@ -57,8 +62,15 @@ async def run(state):
     # Setup
     hil = state['hil']
     log_filename = state['log_filename']
+    cmd_queue = state['command_queue']
 
     # Send Commands
+    if not cmd_queue.empty():
+        curr_command = cmd_queue.get_nowait()
+    else:
+        curr_command = Command(operation=Operation.NO_OP)
+
+    state = await execute_command(state, curr_command)
 
     # Acquire Data for next cycle
     await hil.gather_telemetry()
@@ -76,9 +88,7 @@ async def run(state):
                 'value': n_v['value']
             }
     with open(log_filename, 'a') as lf:
-        lf.writeline(json.dumps(ts_data_raw))
-
-    # Determine actions next cycle
+        lf.write(f'{json.dumps(ts_data_raw)}\n')
 
     # Return state for next processing round
     return state

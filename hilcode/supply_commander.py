@@ -49,7 +49,7 @@ class SorensenXPF6020DP(object):
         return _trim_string(response)
 
     def _generic_command(self, command):
-        logging.debug(f'WRITIG: {command}')
+        logging.debug(f'WRITING: {command}')
         self.writer.write(command)
 
     async def identify(self):
