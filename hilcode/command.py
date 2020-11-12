@@ -7,44 +7,20 @@ async def execute_command(state, curr_command):
     if curr_command.operation == Operation.NO_OP:
         logging.debug(f'NO_OP COMMAND RECIEVED')
         return state
-    elif curr_command.operation == Operation.PWR_SUPPLY_CMD:
-        return power_supply_command(state, curr_command)
-    elif curr_command.operation == Operation.SERIAL_CMD:
-        return serial_command(state, curr_command)
-    elif curr_command.operation == Operation.RECOVERY:
-        return recovery(state, curr_command)
-    elif curr_command.operation == Operation.RESTART:
-        return restart(state, curr_command)
-    elif curr_command.operation == Operation.WAIT_ON_VAR:
-        return wait_on_var(state, curr_command)
-    elif curr_command.operation == Operation.SSH_CMD:
-        return ssh_cmd(state, curr_command)
+    elif curr_command.operation == Operation.PWR_SUPPLY_CMD or \
+        curr_command.operation == Operation.SERIAL_CMD or \
+        curr_command.operation == Operation.SSH_CMD or \
+        curr_command.operation == Operation.RECOVERY or \
+        curr_command.operation == Operation.RESTART:
+        return await generic_command(state, curr_command)
     else:
         RuntimeError(f'Operation {curr_command.operation} not recognized.')
 
-async def power_supply_command(state, curr_command):
+async def generic_command(state, curr_command):
     # Get component to manipulate
-    comp = state['HIL'].get_component(curr_command.target)
-    await comp.command(curr_command['options'])
+    comp = state['hil'].get_component(curr_command.target)
+    await comp.command(curr_command.options)
     # No change to state, so pass back
-    return state
-
-async def serial_command(state, curr_command):
-    # Get component to manipulate
-    comp = state['HIL'].get_component(curr_command.target)
-    await comp.command(curr_command['options'])
-    return state
-
-async def recovery(state, curr_command):
-    return state
-
-async def restart(state, curr_command):
-    return state
-
-async def wait_on_var(state, curr_command):
-    return state
-
-async def ssh_cmd(state, curr_command):
     return state
 
 

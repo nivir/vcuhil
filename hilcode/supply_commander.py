@@ -92,13 +92,13 @@ class SorensenXPF6020DP(object):
         return float((await self._generic_command_response(f'I2O?'))[:-1])
 
     async def get_output_channel1(self):
-        return bool((await self._generic_command_response('OP1?'))[:])
+        return int((await self._generic_command_response('OP1?'))[:])
 
     def set_output_channel1(self, boolean):
         self._generic_command(f'OP1 {int(boolean)}')
 
     async def get_output_channel2(self):
-        return bool((await self._generic_command_response('OP2?'))[:])
+        return int((await self._generic_command_response('OP2?'))[:])
 
     def set_output_channel2(self, boolean):
         self._generic_command(f'OP2 {int(boolean)}')

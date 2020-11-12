@@ -6,7 +6,6 @@
 from hil_config import VCU_CONFIGS
 from hilcode.components import VCU, HIL
 from hilcode.command import Command, Operation, execute_command
-import queue
 import logging
 import asyncio
 import argparse
@@ -14,14 +13,18 @@ import time
 import sys
 import pint
 import json
+import pprint
 
 CYCLE_TIME = 1
 
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 log = logging.Logger('VCUHIL_service')
 log.setLevel(logging.DEBUG)
+
+# Globals
+command_queue = asyncio.Queue()
 
 # Setup
 async def setup(args):
@@ -41,14 +44,10 @@ async def setup(args):
     await hil.setup('VCU HIL')
     logging.info('-=NINJA TURTLES GO=-')
 
-    # Setup Command Queue
-    command_queue = queue.Queue()
-
     return {
         'done': False,
         'hil': hil,
         'log_filename': args['log_filename'],
-        'command_queue': command_queue,
     }
 
 # Loop (every second)
@@ -62,7 +61,7 @@ async def run(state):
     # Setup
     hil = state['hil']
     log_filename = state['log_filename']
-    cmd_queue = state['command_queue']
+    cmd_queue = command_queue
 
     # Send Commands
     if not cmd_queue.empty():
@@ -75,6 +74,7 @@ async def run(state):
     # Acquire Data for next cycle
     await hil.gather_telemetry()
     ts_data = hil.telemetry.timestamped_data()
+    logging.debug(pprint.pformat(ts_data))
     ts_data_raw = {}
     for ts, n_v in ts_data.items():
         if isinstance(n_v['value'], pint.Quantity):
@@ -111,6 +111,19 @@ async def periodic_run(cycle_time, state):
     await asyncio.sleep(wait_time) # IDLE Time
     return new_state
 
+
+async def json_server(reader, writer):
+    while True:
+        data = await reader.readline()
+        message = data.decode()
+        command_options = json.loads(message)
+        cmd = Command(Operation(command_options['operation']), command_options['options'], command_options['target'])
+        await command_queue.put(cmd)
+        data = ['ACK']
+        writer.write(json.dumps(data).encode())
+
+
+
 # Main Function
 async def main(args):
     """
@@ -120,6 +133,9 @@ async def main(args):
     :return: N/A
     """
     state = await setup(args)
+    factory = await asyncio.start_server(json_server, *('localhost', args['parser_port']))
+    log.debug(f'Starting up json server on port {args["parser_port"]}')
+
     while not state['done']:
         task = asyncio.create_task(periodic_run(CYCLE_TIME, state))
         if task.done():
@@ -139,6 +155,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--log_filename',
         default='log.json'
+    )
+    parser.add_argument(
+        '--parser_port',
+        default=8080
     )
     args = parser.parse_args()
     try:

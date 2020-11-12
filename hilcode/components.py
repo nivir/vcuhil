@@ -166,7 +166,8 @@ class PowerSupply(Component):
         await super().setup(name)
 
     async def command(self, options):
-        return await getattr(self.client, options['command'])(options['value'])
+        func = getattr(self.client, options['command'])
+        return func(options['value'])
 
     async def gather_telemetry(self):
         # Get Power Status
