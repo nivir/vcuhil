@@ -142,7 +142,7 @@ class Micro(Component):
         await super().setup(name)
 
     async def command(self, options):
-        return await self.client.command(options['value'])
+        return await self.client.command(options)
 
 
 class PowerSupply(Component):

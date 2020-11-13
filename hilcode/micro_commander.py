@@ -24,7 +24,7 @@ class VCUMicroDevice(object):
 
     async def command(self, command):
         logging.debug(f'WRITING: {command}')
-        self.writer.write(command)
+        self.writer.write(f'{command}\n'.encode())
         await asyncio.sleep(0.1)
 
 

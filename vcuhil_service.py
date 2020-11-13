@@ -6,6 +6,7 @@
 from hil_config import VCU_CONFIGS
 from hilcode.components import VCU, HIL
 from hilcode.command import Command, Operation, execute_command
+from contextvars import ContextVar
 import logging
 import asyncio
 import argparse
@@ -24,7 +25,8 @@ log = logging.Logger('VCUHIL_service')
 log.setLevel(logging.DEBUG)
 
 # Globals
-command_queue = asyncio.Queue()
+command_queue = ContextVar('command_queue')
+telemetry_queue = ContextVar('telemetry_queue')
 
 # Setup
 async def setup(args):
@@ -48,6 +50,8 @@ async def setup(args):
         'done': False,
         'hil': hil,
         'log_filename': args['log_filename'],
+        'command_queue': asyncio.Queue(),
+        'telemetry_queue': asyncio.Queue()
     }
 
 # Loop (every second)
@@ -61,7 +65,9 @@ async def run(state):
     # Setup
     hil = state['hil']
     log_filename = state['log_filename']
-    cmd_queue = command_queue
+
+    cmd_queue = state['command_queue']
+    tlm_queue = state['telemetry_queue']
 
     # Send Commands
     if not cmd_queue.empty():
@@ -87,6 +93,12 @@ async def run(state):
                 'name': n_v['name'],
                 'value': n_v['value']
             }
+    # Telem Out
+    if tlm_queue.full():
+        await telemetry_queue.get()
+    tlm_queue.put_nowait(f'{json.dumps(ts_data_raw)}\n')
+
+    # Write telem to log file
     with open(log_filename, 'a') as lf:
         lf.write(f'{json.dumps(ts_data_raw)}\n')
 
@@ -113,22 +125,36 @@ async def periodic_run(cycle_time, state):
 
 
 async def json_server(reader, writer):
-    while True:
-        data = await reader.readline()
-        try:
-            message = data.decode()
-            command_options = json.loads(message)
-            cmd = Command(Operation(command_options['operation']), command_options['options'], command_options['target'])
-            await command_queue.put(cmd)
-            data = ['ACK']
-            writer.write(json.dumps(data).encode())
-        except json.JSONDecodeError:
-            data = ['INVALID JSON']
-            writer.write(json.dumps(data).encode())
-        except KeyError:
-            data = ['INVALID CMD']
-            writer.write(json.dumps(data).encode())
+    data = await reader.readline()
+    cmd_queue = command_queue.get()
+    try:
+        message = data.decode()
+        command_options = json.loads(message)
+        cmd = Command(
+            operation=Operation(command_options['operation']),
+            options=command_options['options'],
+            target=command_options['target']
+        )
+        await cmd_queue.put(cmd)
+        data = ['ACK']
+        writer.write(json.dumps(data).encode())
+    except json.decoder.JSONDecodeError:
+        data = ['INVALID JSON']
+        writer.write(json.dumps(data).encode())
+    except KeyError:
+        data = ['INVALID CMD']
+        writer.write(json.dumps(data).encode())
+    except ValueError:
+        data = ['INVALID CMD']
+        writer.write(json.dumps(data).encode())
+    finally:
+        writer.close()
 
+async def telem_server(reader, writer):
+    tlm_queue = telemetry_queue.get()
+    tl = await tlm_queue.get()
+    writer.write(str(tl).encode())
+    writer.close()
 
 # Main Function
 async def main(args):
@@ -139,7 +165,12 @@ async def main(args):
     :return: N/A
     """
     state = await setup(args)
-    factory = await asyncio.start_server(json_server, *('localhost', args['parser_port']))
+    command_queue.set(state['command_queue'])
+    telemetry_queue.set(state['telemetry_queue'])
+
+
+    cmd_factory = await asyncio.start_server(json_server, *('localhost', args['parser_port']))
+    telem_factory = await asyncio.start_server(telem_server, *('localhost', args['telem_port']))
     log.debug(f'Starting up json server on port {args["parser_port"]}')
 
     while not state['done']:
@@ -151,6 +182,8 @@ async def main(args):
             await asyncio.sleep(CYCLE_TIME)
     # No longer running, 'done' called
     logging.info('Service Terminated')
+    cmd_factory.close()
+    telem_factory.close()
     sys.exit(0) # Terminated properly
 
 
@@ -165,6 +198,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--parser_port',
         default=8080
+    )
+    parser.add_argument(
+        '--telem_port',
+        default=8888
     )
     args = parser.parse_args()
     try:

@@ -1,9 +1,21 @@
 from enum import Enum
 import logging
+import json
 
 class CommandWarning(RuntimeWarning):
     pass
 
+class CommandError(RuntimeError):
+    pass
+
+class Operation(Enum):
+    NO_OP = 0
+    PWR_SUPPLY_CMD = 1
+    SERIAL_CMD = 2
+    RECOVERY = 3
+    RESTART = 4
+    WAIT_ON_VAR = 5
+    FORCE_LOAD = 6
 
 async def execute_command(state, curr_command):
     if curr_command.operation == Operation.NO_OP:
@@ -29,27 +41,25 @@ async def generic_command(state, curr_command):
     return state
 
 
-class Operation(Enum):
-    NO_OP = 0
-    PWR_SUPPLY_CMD = 1
-    SERIAL_CMD = 2
-    RECOVERY = 3
-    RESTART = 4
-    WAIT_ON_VAR = 5
-    FORCE_LOAD = 6
-
-
 class Command(object):
     def __init__(self,
+                 json_data='',
                  operation=Operation.NO_OP,
-                 options={},
+                 options=None,
                  target=''
                  ):
-        assert isinstance(operation, Operation)
-        self.operation = operation
-        self.options = options
-        self.target = target
-
+        if json_data == '':
+            assert isinstance(operation, Operation)
+            self.operation = operation
+            self.options = options
+            self.target = target
+        else:
+            dict = json.loads(json_data)
+            self.operation = dict['operation']
+            self.options = dict['options']
+            self.target = dict['target']
 
     def __str__(self):
-        return f'COMMAND {self.operation}\tTARGET: {self.target}\tOPTIONS {self.options}'
+        d = {'operation': self.operation.value, 'options': self.options, 'target': self.target}
+        return f'{json.dumps(d)}\n'
+

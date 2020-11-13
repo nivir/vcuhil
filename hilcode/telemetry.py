@@ -1,5 +1,28 @@
 import time
 import pprint
+import json
+
+class TelemetryJsonLine(object):
+    def __init__(self, json_in):
+        self.telemetry = []
+        dump = json.loads(json_in)
+        for timestamp, value in dump.items():
+            tc = TelemetryChannel(value['name'])
+            tc.set_value(timestamp, value['value'])
+            self.telemetry.append(tc)
+
+    def __str__(self):
+        json_data = []
+        for tlm_ch in self.telemetry:
+            json_data.append({'name': tlm_ch.name, 'timestamp': tlm_ch.timestamp, 'value': tlm_ch.value})
+        return json.dumps(json_data)
+
+    def get_channels_dict(self):
+        data = []
+        for tlm_ch in self.telemetry:
+            data.append({'name': tlm_ch.name, 'timestamp': tlm_ch.timestamp, 'value': tlm_ch.value})
+        return data
+
 
 class TelemetryChannel(object):
     def __init__(self, name):
@@ -15,7 +38,7 @@ class TelemetryChannel(object):
         self.set_value(time.time(), value)
 
     def __str__(self):
-        return f'{self.name}:\t@{str(self.timestamp)} VALUE {str(self.value)}'
+        return json.dumps({'name': self.name, 'timestamp': self.timestamp, 'value': self.value})
 
 class StringTelemetryChannel(TelemetryChannel):
     pass
