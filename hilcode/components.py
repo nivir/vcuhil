@@ -5,7 +5,11 @@ import pprint
 from transitions import Machine
 from pint import UnitRegistry
 from hilcode.telemetry import TelemetryKeeper, UnitTelemetryChannel, StringTelemetryChannel, BooleanTelemetryChannel
-from hilcode.command import CommandWarning
+from hilcode.command import CommandWarning, Operation
+import logging
+import gc
+
+log = logging.getLogger(__name__)
 
 class Component(object):
     def __init__(self, name):
@@ -19,6 +23,13 @@ class Component(object):
 
     @abc.abstractmethod
     def all_configs(self):
+        pass
+
+    @abc.abstractmethod
+    async def command(self, operation, options):
+        pass
+
+    async def close(self):
         pass
 
     async def gather_telemetry(self):
@@ -61,6 +72,10 @@ class HIL(Component):
             await component.setup(component_name)
         await super().setup(name)
 
+    async def command(self, operation, options):
+        pass
+
+
     def __str__(self):
         nl = '\n'
         config = ''.join([f'{x.type} {x_name}{nl}-=CONFIG=-{nl}{str(x)}{nl}{nl}'
@@ -70,7 +85,7 @@ class HIL(Component):
 
 
 class VCU(Component):
-    states = ['power_off', 'booting', 'idle', 'command', 'recovery']
+    states = ['power_off', 'booting', 'idle', 'command', 'recovery', 'offline']
     transitions = [
         {'trigger': 'power_off', 'source':'*', 'dest':'power_off'},
         {'trigger': 'power_on', 'source': 'power_off', 'dest': 'booting'},
@@ -79,7 +94,35 @@ class VCU(Component):
         {'trigger': 'recover', 'source': 'idle', 'dest': 'recovery'},
         {'trigger': 'reboot', 'source': '*', 'dest': 'booting'},
         {'trigger': 'cmd_complete', 'source': 'command', 'dest': 'idle'},
+        {'trigger': 'bring_offline', 'source': '*', 'dest': 'offline'}
     ]
+
+    def _setup_state_callbacks(self):
+        pass
+        #self.vcu_machine.on_enter_offline('desetup')
+        #self.vcu_machine.on_enter_power_off('resetup')
+
+    async def command(self, operation, options):
+        if operation == Operation.BRING_OFFLINE:
+            logging.info(f'Bringing VCU {self.name} offline.')
+            await self.desetup()
+            self.bring_offline()
+        elif operation == Operation.POWER_OFF:
+            logging.info(f'Bringing VCU {self.name} to power_off state.')
+            await self.desetup()
+            await self.setup(self.name)
+            self.power_off()
+        else:
+            logging.error('WTF A VCU COMMAND?')
+            raise RuntimeError('A VCU COMMAND?  NOT IN THIS HOUSE')
+
+    async def desetup(self):
+        logging.debug(f'VCU {self.name} is being desetup')
+        keys = self.components.keys()
+        for comp_name in keys:
+            await self.components[comp_name].close()
+            self.telemetry.purge(comp_name)
+        self.components = {}
 
     def __init__(self, name, configs):
         super().__init__(name)
@@ -88,6 +131,7 @@ class VCU(Component):
         self.vcu_machine = Machine(model=self, states=VCU.states, transitions=VCU.transitions, initial='power_off')
         self.telemetry = TelemetryKeeper(name)
         self._setup_telemetry()
+        self._setup_state_callbacks()
 
     def _setup_telemetry(self):
         # HIL State
@@ -102,18 +146,19 @@ class VCU(Component):
         return self.configs
 
     async def setup(self, name):
+        logging.debug(f'Setting up VCU {self.name} alias {name}')
         for config_dev, config_dict in self.configs.items():
             if   'sorensen_psu' in config_dict['type']:
                 # Create a power supply component
-                self.components[config_dev] = PowerSupply(f'{self.name}.psu_{self.name}', SorensenXPF6020DP())
+                self.components[config_dev] = PowerSupply('psu', SorensenXPF6020DP())
                 # Connect telnet client for power supply to actual physical power supply
                 await self.components[config_dev].client.connect(config_dict['host'], config_dict['port'])
                 # Complete setup for power supply
-                await self.components[config_dev].setup(f'{self.name}.psu_{self.name}')
+                await self.components[config_dev].setup('psu')
             elif 'micro' in config_dict['type']:
-                self.components[config_dev] = Micro(f'{self.name}.micro_{config_dev}', VCUMicroDevice())
+                self.components[config_dev] = Micro(f'micro_{config_dev}', VCUMicroDevice())
                 await self.components[config_dev].client.connect(config_dict['serial'], baudrate=config_dict['baudrate'])
-                await self.components[config_dev].setup(f'{self.name}.micro_{config_dev}')
+                await self.components[config_dev].setup(f'micro_{config_dev}')
             elif 'sga' in config_dict['type']:
                 self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
             elif 'hpa' in config_dict['type']:
@@ -141,8 +186,11 @@ class Micro(Component):
     async def setup(self, name):
         await super().setup(name)
 
-    async def command(self, options):
+    async def command(self, operation, options):
         return await self.client.command(options)
+
+    async def close(self):
+        return await self.client.close()
 
 
 class PowerSupply(Component):
@@ -162,10 +210,10 @@ class PowerSupply(Component):
         return {}
 
     async def setup(self, name):
-        self._setup_telemetry(name)
         await super().setup(name)
+        self._setup_telemetry(name)
 
-    async def command(self, options):
+    async def command(self, operation, options):
         try:
             func = getattr(self.client, options['command'])
             return func(options['value'])
@@ -173,6 +221,9 @@ class PowerSupply(Component):
             raise CommandWarning(f'Command {options} failed.')
         except AttributeError:
             raise CommandWarning(f'Command {options} failed.')
+
+    async def close(self):
+        return await self.client.close()
 
     async def gather_telemetry(self):
         # Get Power Status

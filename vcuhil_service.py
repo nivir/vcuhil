@@ -21,7 +21,7 @@ CYCLE_TIME = 1
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-log = logging.Logger('VCUHIL_service')
+log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 # Globals
@@ -75,9 +75,11 @@ async def run(state):
     else:
         curr_command = Command(operation=Operation.NO_OP)
 
+    log.debug(f'Executing command {curr_command}')
     state = await execute_command(state, curr_command)
 
     # Acquire Data for next cycle
+    log.debug('Command complete, now getting telemetry')
     await hil.gather_telemetry()
     ts_data = hil.telemetry.timestamped_data()
     logging.debug(pprint.pformat(ts_data))
@@ -174,12 +176,16 @@ async def main(args):
     log.debug(f'Starting up json server on port {args["parser_port"]}')
 
     while not state['done']:
-        task = asyncio.create_task(periodic_run(CYCLE_TIME, state))
-        if task.done():
-            state = task.result()
-            continue
-        else:
+        log.debug('Launching new task')
+        task = asyncio.create_task(periodic_run(0, state))
+        log.debug('Waiting for Task to end')
+        await asyncio.sleep(CYCLE_TIME)
+        log.debug('Task should have ended by now....')
+        while not task.done():
+            log.debug('Task did not end, wait for it to end')
             await asyncio.sleep(CYCLE_TIME)
+        log.debug('Task Complete, saving results')
+        state = task.result()
     # No longer running, 'done' called
     logging.info('Service Terminated')
     cmd_factory.close()

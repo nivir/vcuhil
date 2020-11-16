@@ -61,22 +61,30 @@ class TelemetryKeeper(object):
         self.telemetry_channels = {}
         self.telemetry_keepers = {}
 
+    def purge(self, name):
+        if name in self.telemetry_channels.keys():
+            self.telemetry_channels.pop(name)
+        elif name in self.telemetry_keepers.keys():
+            self.telemetry_keepers.pop(name)
+        else:
+            RuntimeError(f'{name} not found in telemetry channels or keepers.')
+
     def add_telemetry_channel(self, channel):
         self.telemetry_channels[channel.name] = channel
 
     def add_telemetry_keeper(self, keeper):
-        self.telemetry_keepers[f'{self.name}.{keeper.name}'] = keeper
+        self.telemetry_keepers[keeper.name] = keeper
 
     def __str__(self):
         return pprint.pformat(self.current_data())
 
-    def current_data(self):
-        data = {f'{self.name}.{name}':{
+    def current_data(self, prefix=''):
+        data = {f'{prefix}{self.name}.{name}':{
             'timestamp': x.timestamp,
             'value': x.value
         } for name, x in self.telemetry_channels.items()}
         for tk_name, tk in self.telemetry_keepers.items():
-            tk_data = tk.current_data()
+            tk_data = tk.current_data(prefix=f'{prefix}{self.name}.')
             data.update(tk_data)
         return data
 
