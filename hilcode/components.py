@@ -3,6 +3,7 @@ from hilcode.micro_commander import VCUMicroDevice
 from hilcode.sga_commander import VCUSGA
 import abc
 import pprint
+import asyncio
 from transitions import Machine
 from pint import UnitRegistry
 from hilcode.telemetry import TelemetryKeeper, UnitTelemetryChannel, StringTelemetryChannel, BooleanTelemetryChannel
@@ -134,8 +135,10 @@ class VCU(Component):
 
     async def command_callstack(self, cmd):
         if cmd.operation == Operation.SERIAL_CMD:
-            if cmd.options['command'] == 'tegrareset x1':
-                self.reboot()
+            if self.state == 'idle':
+                if cmd.target == f'{self.name}.hia':
+                    if cmd.options['command'] == 'tegrareset x1':
+                        self.reboot()
 
     async def command(self, operation, options):
         if operation == Operation.BRING_OFFLINE:

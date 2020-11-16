@@ -80,7 +80,7 @@ class MicroClient(ComponentClient):
     def command(self, cmd):
         cmd_client = VCUHIL_command(self.host, cmd_port=self.cmd_port)
         return cmd_client.command(command.Command(
-            operation=command.Operation.PWR_SUPPLY_CMD,
+            operation=command.Operation.SERIAL_CMD,
             target=self.name,
             options={'command':cmd.options['command']}
         ))
