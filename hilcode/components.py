@@ -113,12 +113,18 @@ class VCU(Component):
             await self.setup(self.name)
             self.power_off()
         elif operation == Operation.ENABLE:
-            logging.info(f'Bringing VCU {self.name} power up.')
-            await self.components['psu'].enable()
-            self.power_on()
+            if self.state == 'power_off':
+                logging.info(f'Bringing VCU {self.name} power up.')
+                await self.components['psu'].enable()
+                self.power_on()
+            else:
+                RuntimeWarning('ENABLE command can only be called in power_off sate.')
         elif operation == Operation.BOOTED_FORCE:
-            logging.info(f'Forcing VCU {self.name} into idle state.')
-            self.booted()
+            if self.state == 'booting':
+                logging.info(f'Forcing VCU {self.name} into idle state.')
+                self.booted()
+            else:
+                RuntimeWarning('Force Boot command can only be called in booting sate.')
         else:
             logging.error('WTF A VCU COMMAND?')
             raise RuntimeError('A VCU COMMAND?  NOT IN THIS HOUSE')

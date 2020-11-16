@@ -34,7 +34,7 @@ async def execute_command(state, curr_command):
         curr_command.operation == Operation.POWER_OFF or\
         curr_command.operation == Operation.ENABLE or\
         curr_command.operation == Operation.BOOTED_FORCE:
-        logging.info(str(curr_command))
+        logging.info(f'COMMAND RECEIVED: {str(curr_command)}')
         return await generic_command(state, curr_command)
     else:
         RuntimeError(f'Operation {curr_command.operation} not recognized.')
