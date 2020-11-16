@@ -141,8 +141,8 @@ VCU_CONFIGS = {
         },
         'sga': {
             'type': 'sga',
-            'hostname': 'vcu-donatello-sga',
-            'odb': 'vcu-donatello-odb',
+            'hostname': 'vcu-donatello',
+            'odb': 'vcu-donatello',
             'serial': '/dev/tty_vcu_donatello_sga',
             'baudrate': 115200,
         },

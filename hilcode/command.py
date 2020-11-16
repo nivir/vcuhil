@@ -41,9 +41,13 @@ async def execute_command(state, curr_command):
 
 async def generic_command(state, curr_command):
     # Get component to manipulate
-    comp = state['hil'].get_component(curr_command.target)
+    stack, comp = state['hil'].get_component_cmdstack(curr_command.target)
     try:
-        # This is for serial commands
+        # Inform stack command is being sent
+        if stack is not None:
+            for upper_comp in stack:
+                await upper_comp.command_callstack(curr_command)
+        # Send command to component
         await comp.command(operation=curr_command.operation, options=curr_command.options)
     except CommandWarning:
         log.warning(f'FAILED COMMAND {curr_command}')

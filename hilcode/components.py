@@ -1,5 +1,6 @@
 from hilcode.supply_commander import SorensenXPF6020DP
 from hilcode.micro_commander import VCUMicroDevice
+from hilcode.sga_commander import VCUSGA
 import abc
 import pprint
 from transitions import Machine
@@ -7,7 +8,6 @@ from pint import UnitRegistry
 from hilcode.telemetry import TelemetryKeeper, UnitTelemetryChannel, StringTelemetryChannel, BooleanTelemetryChannel
 from hilcode.command import CommandWarning, Operation
 import logging
-import gc
 
 log = logging.getLogger(__name__)
 
@@ -29,8 +29,15 @@ class Component(object):
     async def command(self, operation, options):
         pass
 
+    async def command_callstack(self, cmd):
+        pass
+
     async def close(self):
         pass
+
+    async def check_state(self):
+        for _, comp in self.components.items():
+            await comp.check_state()
 
     async def gather_telemetry(self):
         for _, comp in self.components.items():
@@ -49,6 +56,18 @@ class Component(object):
             return context
         else:
             return self.components[name]
+
+    def get_component_cmdstack(self, name):
+        if '.' in name:
+            tokens = str(name).split('.')
+            context = self
+            prev_context = []
+            for token in tokens:
+                prev_context.append(context)
+                context =  context.get_component(token)
+            return prev_context, context
+        else:
+            return None, self.components[name]
 
 
 class HIL(Component):
@@ -101,6 +120,22 @@ class VCU(Component):
         pass
         #self.vcu_machine.on_enter_offline('desetup')
         #self.vcu_machine.on_enter_power_off('resetup')
+
+    async def exec_booting(self):
+        if await self.components['sga'].client.ping():
+            log.debug(f'VCU {self.name} booted.')
+            self.booted()
+
+    async def check_state(self):
+        if self.state == 'booting':
+            return await self.exec_booting()
+        else:
+            pass
+
+    async def command_callstack(self, cmd):
+        if cmd.operation == Operation.SERIAL_CMD:
+            if cmd.options['command'] == 'tegrareset x1':
+                self.reboot()
 
     async def command(self, operation, options):
         if operation == Operation.BRING_OFFLINE:
@@ -173,7 +208,7 @@ class VCU(Component):
                 await self.components[config_dev].client.connect(config_dict['serial'], baudrate=config_dict['baudrate'])
                 await self.components[config_dev].setup(f'micro_{config_dev}')
             elif 'sga' in config_dict['type']:
-                self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
+                self.components[config_dev] = SGA(config_dev, VCUSGA(config_dict['odb']))
             elif 'hpa' in config_dict['type']:
                 self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
             elif 'vlan' in config_dict['type']:
@@ -205,6 +240,13 @@ class Micro(Component):
     async def close(self):
         return await self.client.close()
 
+
+class SGA(Component):
+    def __init__(self, name, client):
+        super().__init__(name)
+        self.type = 'SGA'
+        self.client = client
+        self.telemetry = TelemetryKeeper(name)
 
 class PowerSupply(Component):
     def __init__(self, name, client, defaults):

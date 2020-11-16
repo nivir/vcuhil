@@ -78,6 +78,8 @@ async def run(state):
     log.debug(f'Executing command {curr_command}')
     state = await execute_command(state, curr_command)
 
+    await hil.check_state()
+
     # Acquire Data for next cycle
     log.debug('Command complete, now getting telemetry')
     await hil.gather_telemetry()
