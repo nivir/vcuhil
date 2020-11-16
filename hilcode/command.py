@@ -20,6 +20,8 @@ class Operation(Enum):
     FORCE_LOAD = 6
     BRING_OFFLINE = 7
     POWER_OFF = 8
+    ENABLE = 9
+    BOOTED_FORCE = 10
 
 async def execute_command(state, curr_command):
     if curr_command.operation == Operation.NO_OP:
@@ -29,7 +31,9 @@ async def execute_command(state, curr_command):
         curr_command.operation == Operation.RECOVERY or \
         curr_command.operation == Operation.RESTART or \
         curr_command.operation == Operation.BRING_OFFLINE or\
-        curr_command.operation == Operation.POWER_OFF:
+        curr_command.operation == Operation.POWER_OFF or\
+        curr_command.operation == Operation.ENABLE or\
+        curr_command.operation == Operation.BOOTED_FORCE:
         logging.info(str(curr_command))
         return await generic_command(state, curr_command)
     else:

@@ -16,7 +16,7 @@ class SorensenXPF6020DP(object):
         self.closed = True
 
     async def _on_connection(self):
-        await self._generic_command('*CLS')
+        await self._generic_command('*RST')
 
     async def connect(self, host, port):
         self.reader, self.writer = await telnetlib3.open_connection(host, port)

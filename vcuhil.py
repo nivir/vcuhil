@@ -94,6 +94,10 @@ class PowerSupplyClient(ComponentClient):
     def configure_subcomponent(self, name, subcomponent_config):
         self.subcomponent_name = name
 
+    def command(self, cmd):
+        cmd_client = VCUHIL_command(self.host, cmd_port=self.cmd_port)
+        return cmd_client.command(cmd)
+
     def _generic_command(self, cmd, val):
         cmd_client = VCUHIL_command(self.host, cmd_port=self.cmd_port)
         return cmd_client.command(command.Command(
@@ -150,6 +154,18 @@ class VCUClient(ComponentClient):
                 target=self.name,
                 options=None
             ))
+        elif cmd.operation == command.Operation.ENABLE:
+            return cmd_client.command(command.Command(
+                operation=command.Operation.ENABLE,
+                target=self.name,
+                options=None
+            ))
+        elif cmd.operation == command.Operation.BOOTED_FORCE:
+            return cmd_client.command(command.Command(
+                operation=command.Operation.BOOTED_FORCE,
+                target=self.name,
+                options=None
+            ))
         else:
             raise RuntimeError('Something else that is not a vcu offline')
 
@@ -179,30 +195,38 @@ def print_action_help():
 
 def print_psu_set_help():
     print('SYNTAX: vcuhil.py psu_set [VCU] psu [setting] [value]')
-    print('SETTING: voltage_channel1\t\tSet channel 1 voltage of power supply')
-    print('SETTING: voltage_channel2\t\tSet channel 1 voltage of power supply')
-    print('SETTING: current_channel1\t\tSet channel 1 current of power supply')
-    print('SETTING: current_channel2\t\tSet channel 1 current of power supply')
-    print('SETTING: output_channel1\t\tSet channel 1 output of power supply')
-    print('SETTING: output_channel2\t\tSet channel 1 output of power supply')
+    print('SETTING: voltage_ch1\t\tSet channel 1 voltage of power supply')
+    print('SETTING: voltage_ch2\t\tSet channel 2 voltage of power supply')
+    print('SETTING: current_ch1\t\tSet channel 1 current of power supply')
+    print('SETTING: current_ch2\t\tSet channel 2 current of power supply')
+    print('SETTING: output_ch1\t\tSet channel 1 output of power supply')
+    print('SETTING: output_ch2\t\tSet channel 2 output of power supply')
+    print('SETTING: set_defaults\t\tSet supply to default values for VCU.')
+
 
 def main(args):
     hil = VCUHILClient(args.host, args.cmd_port, args.telem_port)
     if args.action == 'telemetry':
         pprint.pprint(hil.get_telem_dict())
     elif args.action == 'psu_set':
-        if args.command == 'voltage_channel1':
+        if args.command == 'voltage_ch1':
             hil.vcus[args.vcu_name].subcomponents[args.subcomponent_name].set_voltage_channel1(args.setpoint)
-        elif args.command == 'voltage_channel2':
+        elif args.command == 'voltage_ch2':
             hil.vcus[args.vcu_name].subcomponents[args.subcomponent_name].set_voltage_channel2(args.setpoint)
-        elif args.command == 'current_channel1':
+        elif args.command == 'current_ch1':
             hil.vcus[args.vcu_name].subcomponents[args.subcomponent_name].set_current_channel1(args.setpoint)
-        elif args.command == 'current_channel2':
+        elif args.command == 'current_ch2':
             hil.vcus[args.vcu_name].subcomponents[args.subcomponent_name].set_current_channel2(args.setpoint)
-        elif args.command == 'output_channel1':
+        elif args.command == 'output_ch1':
             hil.vcus[args.vcu_name].subcomponents[args.subcomponent_name].set_output_channel1(args.setpoint)
-        elif args.command == 'output_channel2':
+        elif args.command == 'output_ch2':
             hil.vcus[args.vcu_name].subcomponents[args.subcomponent_name].set_output_channel2(args.setpoint)
+        elif args.command == 'set_defaults':
+            hil.vcus[args.vcu_name].subcomponents[args.subcomponent_name].command(command.Command(
+                operation=command.Operation.PWR_SUPPLY_CMD,
+                target=f'{args.vcu_name}.{args.subcomponent_name}',
+                options={'command': 'set_defaults'}
+            ))
         elif args.command == 'help':
             print_psu_set_help()
         else:
@@ -222,6 +246,18 @@ def main(args):
     elif args.action == 'power_off':
         hil.vcus[args.vcu_name].command(command.Command(
             operation=command.Operation.POWER_OFF,
+            target=args.vcu_name,
+            options=None
+        ))
+    elif args.action == 'enable':
+        hil.vcus[args.vcu_name].command(command.Command(
+            operation=command.Operation.ENABLE,
+            target=args.vcu_name,
+            options=None
+        ))
+    elif args.action == 'force_booted':
+        hil.vcus[args.vcu_name].command(command.Command(
+            operation=command.Operation.BOOTED_FORCE,
             target=args.vcu_name,
             options=None
         ))

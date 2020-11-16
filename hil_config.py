@@ -1,6 +1,15 @@
 HIL_IP = '172.31.255.78'
 
 
+PSU_DEFAULTS = {
+    'voltage_ch1': 16.0,
+    'voltage_ch2': 16.0,
+    'current_ch1': 7.0,
+    'current_ch2': 7.0,
+    'output_ch1': 0,
+    'output_ch2': 0
+}
+
 VCU_DEFAULT_AUTO_IPS = {
     'sga': '172.16.66.1',
     'hpa': '172.16.66.2'
@@ -162,6 +171,7 @@ VCU_CONFIGS = {
             'type': 'sorensen_psu',
             'host': 'psu-donatello',
             'port': 9221,
+            'defaults': PSU_DEFAULTS,
         }
     },
     # 'raphael': {

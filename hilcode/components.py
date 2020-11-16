@@ -112,6 +112,13 @@ class VCU(Component):
             await self.desetup()
             await self.setup(self.name)
             self.power_off()
+        elif operation == Operation.ENABLE:
+            logging.info(f'Bringing VCU {self.name} power up.')
+            await self.components['psu'].enable()
+            self.power_on()
+        elif operation == Operation.BOOTED_FORCE:
+            logging.info(f'Forcing VCU {self.name} into idle state.')
+            self.booted()
         else:
             logging.error('WTF A VCU COMMAND?')
             raise RuntimeError('A VCU COMMAND?  NOT IN THIS HOUSE')
@@ -150,7 +157,7 @@ class VCU(Component):
         for config_dev, config_dict in self.configs.items():
             if   'sorensen_psu' in config_dict['type']:
                 # Create a power supply component
-                self.components[config_dev] = PowerSupply('psu', SorensenXPF6020DP())
+                self.components[config_dev] = PowerSupply('psu', SorensenXPF6020DP(), defaults=config_dict['defaults'])
                 # Connect telnet client for power supply to actual physical power supply
                 await self.components[config_dev].client.connect(config_dict['host'], config_dict['port'])
                 # Complete setup for power supply
@@ -194,10 +201,11 @@ class Micro(Component):
 
 
 class PowerSupply(Component):
-    def __init__(self, name, client):
+    def __init__(self, name, client, defaults):
         super().__init__(name)
         self.type = 'PowerSupply'
         self.client = client
+        self.defaults = defaults
         self.telemetry = TelemetryKeeper(name)
 
     async def query_state(self):
@@ -213,10 +221,24 @@ class PowerSupply(Component):
         await super().setup(name)
         self._setup_telemetry(name)
 
+    async def enable(self):
+        await self.client.set_output_channel1(1)
+        await self.client.set_output_channel2(1)
+        return
+
     async def command(self, operation, options):
         try:
-            func = getattr(self.client, options['command'])
-            return func(options['value'])
+            if options['command'] == 'set_defaults':
+                await self.client.set_voltage_channel1(self.defaults['voltage_ch1'])
+                await self.client.set_voltage_channel2(self.defaults['voltage_ch2'])
+                await self.client.set_current_channel1(self.defaults['current_ch1'])
+                await self.client.set_current_channel2(self.defaults['current_ch2'])
+                await self.client.set_output_channel1(self.defaults['output_ch1'])
+                await self.client.set_output_channel2(self.defaults['output_ch2'])
+                return
+            else:
+                func = getattr(self.client, options['command'])
+                return await func(options['value'])
         except KeyError:
             raise CommandWarning(f'Command {options} failed.')
         except AttributeError:
