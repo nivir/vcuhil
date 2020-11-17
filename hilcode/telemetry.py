@@ -9,17 +9,15 @@ class TelemetryJsonLine(object):
         dump = json.loads(json_in)
         for timestamp, value in dump:
             if value['type'] == 'default':
-                tc = TelemetryChannel(value['name'])
+                tc = TelemetryPoint(value['name'], timestamp, value['value'])
             elif value['type'] == 'string':
-                tc = StringTelemetryChannel(value['name'])
+                tc = StringTelemetryPoint(value['name'], timestamp, value['value'])
             elif value['type'] == 'boolean':
-                tc = BooleanTelemetryChannel(value['name'])
+                tc = BooleanTelemetryPoint(value['name'], timestamp, value['value'])
             elif value['type'] == 'unit':
-                unit = getattr(UnitRegistry(), value['unit'])
-                tc = UnitTelemetryChannel(value['name'], unit)
+                tc = UnitTelemetryPoint(value['name'], timestamp, value['value'], value['unit'])
             else:
                 raise RuntimeError('Telemetry type not recognized')
-            tc.set_value(timestamp, value['value'])
             self.telemetry.append(tc)
 
     def __str__(self):
@@ -31,21 +29,33 @@ class TelemetryJsonLine(object):
     def get_telemetry(self):
         return [tlm_ch for tlm_ch in self.telemetry]
 
-
-
 class TelemetryChannel(object):
     def __init__(self, name):
         self.name = name
-        self.value = None
-        self.timestamp = time.time()
+        self.points = []
         self.type = 'default'
 
-    def set_value(self, timestamp, value):
-        self.timestamp = timestamp
-        self.value = value
+    def add_point(self, point):
+        self.points.append(point)
 
-    def set_value_with_immediate_timestamp(self, value):
-        self.set_value(time.time(), value)
+    def get_points(self):
+        return [point.get_dict() for point in self.points]
+
+    def pop_points(self):
+        points = [point.get_dict() for point in self.points]
+        self.points = []
+        return points
+
+    def pop_point(self):
+        return self.points.pop()
+
+
+class TelemetryPoint(object):
+    def __init__(self, name, timestamp, value):
+        self.name = name
+        self.value = value
+        self.timestamp = timestamp
+        self.type = 'default'
 
     def get_dict(self):
         return {
@@ -58,24 +68,23 @@ class TelemetryChannel(object):
     def __str__(self):
         return json.dumps(self.get_dict())
 
-class StringTelemetryChannel(TelemetryChannel):
-    def __init__(self, name):
-        super().__init__(name)
+class StringTelemetryPoint(TelemetryPoint):
+    def __init__(self, name, timestamp, value):
+        super().__init__(name, timestamp, value)
         self.type = 'string'
 
-class BooleanTelemetryChannel(TelemetryChannel):
-    def __init__(self, name):
-        super().__init__(name)
+class BooleanTelemetryPoint(TelemetryPoint):
+    def __init__(self, name, timestamp, value):
+        super().__init__(name, timestamp, value)
         self.type = 'boolean'
 
-class UnitTelemetryChannel(TelemetryChannel):
-    def __init__(self, name, unit):
-        super().__init__(name)
+class UnitTelemetryPoint(TelemetryPoint):
+    def __init__(self, name, timestamp, value, unit):
+        super().__init__(name, timestamp, value)
+        ureg = UnitRegistry()
+        self.unit = getattr(ureg, unit)
+        self.value = value * self.unit
         self.type = 'unit'
-        self.unit = unit
-
-    def set_value(self, timestamp, value):
-        super().set_value(timestamp, value * self.unit)
 
     def get_dict(self):
         return {
@@ -112,7 +121,7 @@ class TelemetryKeeper(object):
 
     def current_data_dict(self, prefix=''):
         # All Telem Channels
-        data = {f'{prefix}{self.name}.{name}':x.get_dict() for name, x in self.telemetry_channels.items()}
+        data = {f'{prefix}{self.name}.{name}':x.pop_points() for name, x in self.telemetry_channels.items()}
         # All telem keepers
         for tk_name, tk in self.telemetry_keepers.items():
             tk_data = tk.current_data_dict(prefix=f'{prefix}{self.name}.')
@@ -121,7 +130,11 @@ class TelemetryKeeper(object):
 
     def timestamped_data(self):
         data = self.current_data_dict()
-        return [ (t_v['timestamp'], t_v) for name, t_v in data.items() ]
+        ts_list = []
+        for name, points in data.items():
+            for point in points:
+                ts_list.append((point['timestamp'], point))
+        return ts_list
 
 
 

@@ -4,9 +4,11 @@ from hilcode.sga_commander import VCUSGA
 from hilcode.hpa_commander import VCUHPA
 import abc
 import pprint
+import asyncio
+import time
 from transitions import Machine
 from pint import UnitRegistry
-from hilcode.telemetry import TelemetryKeeper, UnitTelemetryChannel, StringTelemetryChannel, BooleanTelemetryChannel
+from hilcode.telemetry import TelemetryKeeper, TelemetryChannel, BooleanTelemetryPoint, StringTelemetryPoint, UnitTelemetryPoint
 from hilcode.command import CommandWarning, Operation
 import logging
 
@@ -186,11 +188,16 @@ class VCU(Component):
 
     def _setup_telemetry(self):
         # HIL State
-        self.telemetry.add_telemetry_channel(StringTelemetryChannel('vcu_state'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('vcu_state'))
 
     async def gather_telemetry(self):
-        self.telemetry.telemetry_channels['vcu_state']\
-            .set_value_with_immediate_timestamp(self.state)
+        self.telemetry.telemetry_channels['vcu_state'].add_point(
+            StringTelemetryPoint(
+                'vcu_state',
+                time.time(),
+                self.state
+            )
+        )
         await super().gather_telemetry()
 
     def all_configs(self):
@@ -252,6 +259,8 @@ class Micro(Component):
 
     async def setup(self, name):
         await super().setup(name)
+        await self.client.start()
+        self._setup_telemetry(name)
 
     async def command(self, operation, options):
         return await self.client.command(options)
@@ -259,6 +268,24 @@ class Micro(Component):
     async def close(self):
         return await self.client.close()
 
+    async def gather_telemetry(self):
+        try:
+            while self.client.line_available():
+                line = self.client.get_line_nowait()
+                log.debug(f'Serial Input from {self.name}: {line}')
+                self.telemetry.telemetry_channels['serial_out'].add_point(
+                    StringTelemetryPoint(
+                        'serial_out',
+                        line.time,
+                        line.data
+                    )
+                )
+        except asyncio.QueueEmpty:
+            pass
+        await super().gather_telemetry()
+
+    def _setup_telemetry(self, name):
+        self.telemetry.add_telemetry_channel(TelemetryChannel('serial_out'))
 
 class HPA(Component):
     def __init__(self, name, client):
@@ -324,36 +351,94 @@ class PowerSupply(Component):
     async def gather_telemetry(self):
         # Get Power Status
         power_status = await self.power_status()
-        self.telemetry.telemetry_channels['pri_meas_volt']\
-            .set_value_with_immediate_timestamp(power_status[1]['meas_voltage'])
-        self.telemetry.telemetry_channels['red_meas_volt']\
-            .set_value_with_immediate_timestamp(power_status[2]['meas_voltage'])
-        self.telemetry.telemetry_channels['pri_set_volt']\
-            .set_value_with_immediate_timestamp(power_status[1]['set_voltage'])
-        self.telemetry.telemetry_channels['red_set_volt']\
-            .set_value_with_immediate_timestamp(power_status[2]['set_voltage'])
-        self.telemetry.telemetry_channels['pri_meas_curr']\
-            .set_value_with_immediate_timestamp(power_status[1]['meas_current'])
-        self.telemetry.telemetry_channels['red_meas_curr']\
-            .set_value_with_immediate_timestamp(power_status[2]['meas_current'])
-        self.telemetry.telemetry_channels['pri_set_curr']\
-            .set_value_with_immediate_timestamp(power_status[1]['set_current'])
-        self.telemetry.telemetry_channels['red_set_curr']\
-            .set_value_with_immediate_timestamp(power_status[2]['set_current'])
-        self.telemetry.telemetry_channels['pri_output_enable']\
-            .set_value_with_immediate_timestamp(power_status[1]['output_enabled'])
-        self.telemetry.telemetry_channels['red_output_enable']\
-            .set_value_with_immediate_timestamp(power_status[2]['output_enabled'])
+        self.telemetry.telemetry_channels['pri_meas_volt'].add_point(
+            UnitTelemetryPoint(
+                'pri_meas_volt',
+                time.time(),
+                power_status[1]['meas_voltage'],
+                'volts'
+            )
+        )
+        self.telemetry.telemetry_channels['red_meas_volt'].add_point(
+            UnitTelemetryPoint(
+                'red_meas_volt',
+                time.time(),
+                power_status[2]['meas_voltage'],
+                'volts'
+            )
+        )
+        self.telemetry.telemetry_channels['pri_set_volt'].add_point(
+            UnitTelemetryPoint(
+                'red_meas_volt',
+                time.time(),
+                power_status[1]['set_voltage'],
+                'volts'
+            )
+        )
+        self.telemetry.telemetry_channels['red_set_volt'].add_point(
+            UnitTelemetryPoint(
+                'red_meas_volt',
+                time.time(),
+                power_status[2]['set_voltage'],
+                'volts'
+            )
+        )
+        self.telemetry.telemetry_channels['pri_meas_curr'].add_point(
+            UnitTelemetryPoint(
+                'pri_meas_curr',
+                time.time(),
+                power_status[1]['meas_current'],
+                'amperes'
+            )
+        )
+        self.telemetry.telemetry_channels['red_meas_curr'].add_point(
+            UnitTelemetryPoint(
+                'red_meas_curr',
+                time.time(),
+                power_status[2]['meas_current'],
+                'amperes'
+            )
+        )
+        self.telemetry.telemetry_channels['pri_set_curr'].add_point(
+            UnitTelemetryPoint(
+                'red_meas_curr',
+                time.time(),
+                power_status[1]['set_current'],
+                'amperes'
+            )
+        )
+        self.telemetry.telemetry_channels['red_set_curr'].add_point(
+            UnitTelemetryPoint(
+                'red_meas_curr',
+                time.time(),
+                power_status[2]['set_current'],
+                'amperes'
+            )
+        )
+        self.telemetry.telemetry_channels['pri_output_enable'].add_point(
+            BooleanTelemetryPoint(
+                'pri_output_enable',
+                time.time(),
+                power_status[1]['output_enabled']
+            )
+        )
+        self.telemetry.telemetry_channels['red_output_enable'].add_point(
+            BooleanTelemetryPoint(
+                'red_output_enable',
+                time.time(),
+                power_status[2]['output_enabled']
+            )
+        )
         await super().gather_telemetry()
 
     def _setup_telemetry(self, name):
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('pri_meas_volt', UnitRegistry().volts))
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('red_meas_volt', UnitRegistry().volts))
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('pri_set_volt', UnitRegistry().volts))
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('red_set_volt', UnitRegistry().volts))
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('pri_meas_curr', UnitRegistry().amperes))
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('red_meas_curr', UnitRegistry().amperes))
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('pri_set_curr', UnitRegistry().amperes))
-        self.telemetry.add_telemetry_channel(UnitTelemetryChannel('red_set_curr', UnitRegistry().amperes))
-        self.telemetry.add_telemetry_channel(BooleanTelemetryChannel('pri_output_enable'))
-        self.telemetry.add_telemetry_channel(BooleanTelemetryChannel('red_output_enable'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('pri_meas_volt'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('red_meas_volt'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('pri_set_volt'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('red_set_volt'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('pri_meas_curr'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('red_meas_curr'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('pri_set_curr'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('red_set_curr'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('pri_output_enable'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('red_output_enable'))

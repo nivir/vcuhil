@@ -15,6 +15,8 @@ logging.basicConfig(level=logging.INFO,
 log = logging.Logger('VCUHIL_client')
 log.setLevel(logging.DEBUG)
 
+BUFFER_SIZE = 64*1024
+
 def check_command(cmd):
     # Check to see if it's a command, convert from JSON string if not
     if not isinstance(cmd, command.Command):
@@ -35,7 +37,7 @@ class VCUHIL_command(object):
         cmd = check_command(cmd)
         bcmd = str(cmd).encode()
         cmd_socket.send(bcmd)
-        r = cmd_socket.recvmsg(16384)
+        r = cmd_socket.recvmsg(BUFFER_SIZE)
         cmd_socket.close()
         return r
 
@@ -47,7 +49,7 @@ class VCUHIL_telemetry(object):
 
     def get_telem(self):
         cmd_socket = socket.create_connection((self.host, self.port))
-        r = cmd_socket.recvmsg(16384)
+        r = cmd_socket.recvmsg(BUFFER_SIZE)
         cmd_socket.close()
         return telemetry.TelemetryJsonLine(r[0])
 
