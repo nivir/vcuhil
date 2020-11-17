@@ -34,11 +34,11 @@ class VCUMicroDevice(object):
         return data
 
     async def command(self, command):
-        pprint.pprint(await self.flush_buffer())
+        logging.info(await self.flush_buffer())
         self.writer.write('\r\n'.encode())
         await self.writer.drain()
         await asyncio.sleep(0.1)
-        pprint.pprint(await self.flush_buffer()) # SB Prompt
+        logging.info(await self.flush_buffer()) # SB Prompt
         cmd = command['command']
         log.debug(f'WRITING: {cmd}')
         self.writer.write(f'{cmd}\r\n'.encode())
