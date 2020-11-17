@@ -180,7 +180,7 @@ class VCUHILClient(object):
     def get_telem_dict(self):
         tlm = VCUHIL_telemetry(self.host, self.telem_port)
         lines = tlm.get_telem()
-        return lines.get_channels_dict()
+        return lines.get_channels_list()
 
 
 def print_action_help():

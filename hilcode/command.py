@@ -22,6 +22,7 @@ class Operation(Enum):
     POWER_OFF = 8
     ENABLE = 9
     BOOTED_FORCE = 10
+    VERSION_CHECK = 12
 
 async def execute_command(state, curr_command):
     if curr_command.operation == Operation.NO_OP:

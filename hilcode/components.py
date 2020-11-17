@@ -4,7 +4,6 @@ from hilcode.sga_commander import VCUSGA
 from hilcode.hpa_commander import VCUHPA
 import abc
 import pprint
-import asyncio
 from transitions import Machine
 from pint import UnitRegistry
 from hilcode.telemetry import TelemetryKeeper, UnitTelemetryChannel, StringTelemetryChannel, BooleanTelemetryChannel

@@ -12,7 +12,6 @@ import asyncio
 import argparse
 import time
 import sys
-import pint
 import json
 import pprint
 
@@ -51,7 +50,7 @@ async def setup(args):
         'hil': hil,
         'log_filename': args['log_filename'],
         'command_queue': asyncio.Queue(),
-        'telemetry_queue': asyncio.Queue()
+        'telemetry_queue': asyncio.LifoQueue()
     }
 
 # Loop (every second)
@@ -85,26 +84,16 @@ async def run(state):
     await hil.gather_telemetry()
     ts_data = hil.telemetry.timestamped_data()
     logging.debug(pprint.pformat(ts_data))
-    ts_data_raw = {}
-    for ts, n_v in ts_data.items():
-        if isinstance(n_v['value'], pint.Quantity):
-            ts_data_raw[ts] = {
-                'name': n_v['name'],
-                'value': n_v['value'].magnitude
-            }
-        else:
-            ts_data_raw[ts] = {
-                'name': n_v['name'],
-                'value': n_v['value']
-            }
+
+    ts_data_json = json.dumps(ts_data)
     # Telem Out
     if tlm_queue.full():
         await telemetry_queue.get()
-    tlm_queue.put_nowait(f'{json.dumps(ts_data_raw)}\n')
+    tlm_queue.put_nowait(f'{ts_data_json}\n')
 
     # Write telem to log file
     with open(log_filename, 'a') as lf:
-        lf.write(f'{json.dumps(ts_data_raw)}\n')
+        lf.write(f'{ts_data_json}\n')
 
     # Return state for next processing round
     return state
