@@ -1,6 +1,7 @@
 from hilcode.supply_commander import SorensenXPF6020DP
 from hilcode.micro_commander import VCUMicroDevice
 from hilcode.sga_commander import VCUSGA
+from hilcode.hpa_commander import VCUHPA
 import abc
 import pprint
 import asyncio
@@ -123,7 +124,7 @@ class VCU(Component):
         #self.vcu_machine.on_enter_power_off('resetup')
 
     async def exec_booting(self):
-        if await self.components['sga'].client.ping():
+        if await self.ping_hpa_sga():
             log.debug(f'VCU {self.name} booted.')
             self.booted()
 
@@ -213,7 +214,7 @@ class VCU(Component):
             elif 'sga' in config_dict['type']:
                 self.components[config_dev] = SGA(config_dev, VCUSGA(config_dict['odb']))
             elif 'hpa' in config_dict['type']:
-                self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
+                self.components[config_dev] = HPA(config_dev, VCUHPA(config_dict['hostname'])) #TODO(bhendrix) replace with actual object
             elif 'vlan' in config_dict['type']:
                 self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
         await super().setup(name)
@@ -223,6 +224,22 @@ class VCU(Component):
 
     def __str__(self):
         return pprint.pformat(self.configs)
+
+    async def ping_hpa_sga(self):
+        sga = await self._ping_sga()
+        if not sga:
+            return sga
+        return await self._ping_hpa_through_sga()
+
+
+    async def _ping_sga(self):
+        return await self.components['sga'].client.ping()
+
+    async def _ping_hpa_through_sga(self):
+        sga_conn = await self.components['sga'].client.connect()
+        hpa_status = await self.components['hpa'].client.ping_through_odb(sga_conn)
+        sga_conn.close()
+        return hpa_status
 
 
 class Micro(Component):
@@ -243,6 +260,13 @@ class Micro(Component):
     async def close(self):
         return await self.client.close()
 
+
+class HPA(Component):
+    def __init__(self, name, client):
+        super().__init__(name)
+        self.type = 'HPA'
+        self.client = client
+        self.telemetry = TelemetryKeeper(name)
 
 class SGA(Component):
     def __init__(self, name, client):

@@ -1,4 +1,5 @@
 import asyncio
+import pprint
 import serial_asyncio
 import logging
 
@@ -15,17 +16,32 @@ class VCUMicroDevice(object):
         self.writer = None
 
     async def connect(self, serial, baudrate=115200):
-        logging.debug('CONNECTING')
+        logging.debug('CONNECTING to serial device')
         self.reader, self.writer = await serial_asyncio.open_serial_connection(url=serial, baudrate=baudrate)
-        logging.debug('CONNECTED')
+        logging.debug('CONNECTED to serial device')
 
     async def close(self):
         self.writer.close()
         await self.writer.wait_closed()
 
+    async def flush_buffer(self):
+        data = []
+        try:
+            while True:
+                data.append(await asyncio.wait_for(self.reader.readline(), timeout=0.1))
+        except asyncio.TimeoutError:
+            log.debug('buffer flushed')
+        return data
+
     async def command(self, command):
-        logging.debug(f'WRITING: {command}')
-        self.writer.write(f'{command}\n'.encode())
+        pprint.pprint(await self.flush_buffer())
+        self.writer.write('\r\n'.encode())
+        await self.writer.drain()
+        await asyncio.sleep(0.1)
+        pprint.pprint(await self.flush_buffer()) # SB Prompt
+        cmd = command['command']
+        log.debug(f'WRITING: {cmd}')
+        self.writer.write(f'{cmd}\r\n'.encode())
         await self.writer.drain()
         await asyncio.sleep(0.1)
 

@@ -145,12 +145,16 @@ VCU_CONFIGS = {
             'odb': 'vcu-donatello',
             'serial': '/dev/tty_vcu_donatello_sga',
             'baudrate': 115200,
+            'username': 'root',
+            'password': 'root',
         },
         'hpa': {
             'type': 'hpa',
-            'hostname': 'vcu-donatello-hpa',
+            'hostname': '172.16.66.2',
             'serial': '/dev/tty_vcu_donatello_hpa',
             'baudrate': 115200,
+            'username': 'root',
+            'password': 'root',
         },
         'hia': {
             'type': 'micro',

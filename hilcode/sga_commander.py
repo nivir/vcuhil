@@ -17,20 +17,24 @@ class VCUSGA(object):
         self.reader = None
         self.writer = None
 
+    async def connect(self):
+        return await asyncssh.connect(self.host, port=self.port, username = 'root', password='root', login_timeout=1)
+
+
     async def ping(self):
         logging.debug('SGA PINGING')
         try:
-            async with asyncssh.connect(self.host, port=self.port, username = 'root', password='root', login_timeout=1) as conn:
-                result = await conn.run('echo "Hello!"', check=True)
-                conn.close()
-                if result.exit_status == 0:
-                    # ping succeeded
-                    logging.debug('SGA Available')
-                    return True
-                else:
-                    # ping failed
-                    logging.debug('SGA Not Available')
-                    return False
+            conn = await self.connect()
+            result = await conn.run('echo "Hello!"', check=True)
+            conn.close()
+            if result.exit_status == 0:
+                # ping succeeded
+                logging.debug('SGA Available')
+                return True
+            else:
+                # ping failed
+                logging.debug('SGA Not Available')
+                return False
         except gaierror:
             logging.debug('SGA Not Available')
             return False
