@@ -18,6 +18,13 @@ log.setLevel(logging.DEBUG)
 BUFFER_SIZE = 64*1024
 
 def check_command(cmd):
+    """
+    If this is a command object, do nothing.  However, if it's a string, try to convert JSON in string to
+    a command object.
+
+    :param cmd: String containting JSON command, or command object.
+    :return: Command Object, either passed in or representing what's in the string.
+    """
     # Check to see if it's a command, convert from JSON string if not
     if not isinstance(cmd, command.Command):
         if isinstance(cmd, str):
@@ -28,11 +35,27 @@ def check_command(cmd):
 
 
 class VCUHIL_command(object):
+    """
+    Client for HIL commands.
+    """
+
     def __init__(self, host, cmd_port=8080):
+        """
+        Generate a HIL command client.
+
+        :param host: Command client hostname
+        :param cmd_port: Command client port (default of 8080)
+        """
         self.host = host
         self.port = cmd_port
 
     def command(self, cmd):
+        """
+        Send a command to the HIL service.
+
+        :param cmd: HIL command to send to service for execution
+        :return: Response from HIL
+        """
         cmd_socket = socket.create_connection((self.host, self.port))
         cmd = check_command(cmd)
         bcmd = str(cmd).encode()
@@ -43,11 +66,26 @@ class VCUHIL_command(object):
 
 
 class VCUHIL_telemetry(object):
+    """
+    HIL Telemetry Client
+    """
+
     def __init__(self, host, telem_port=8888):
+        """
+        Generate a HIL telemetry client.
+
+        :param host: Telemetry client hostname
+        :param telem_port: Telemetry client port (default of 8888)
+        """
         self.host = host
         self.port = telem_port
 
     def get_telem(self):
+        """
+        Get a telemetry point from server
+
+        :return: List of telemetry points from server
+        """
         cmd_socket = socket.create_connection((self.host, self.port))
         r = cmd_socket.recvmsg(BUFFER_SIZE)
         cmd_socket.close()
@@ -55,7 +93,19 @@ class VCUHIL_telemetry(object):
 
 
 class ComponentClient(object):
+    """
+    Abstraction layer, allows control of generic HIL components.
+    """
+
     def __init__(self, name, host, cmd_port=8080, config=None):
+        """
+        Generic HIL component
+
+        :param name:  Name of HIL component
+        :param host:  Hostname of HIL component (usually hil service)
+        :param cmd_port:  Port to use to command HIL component (usually hil service port)
+        :param config: Configuration dictionary for component.
+        """
         self.host = host
         self.cmd_port = cmd_port
         self.name = name
@@ -65,21 +115,61 @@ class ComponentClient(object):
 
         @abc.abstractmethod
         def configure_subcomponent(self, name, subcomponent_config):
+            """
+            ABSTRACT METHOD.  Accepts a subcomponent configuration dictionary, and configures component.
+
+            :param self: This component.
+            :param name:  Name of component.
+            :param subcomponent_config:  Configuration dicitionary for subcomponent.
+            :return:
+            """
             pass
 
         @abc.abstractmethod
         def command(self, cmd):
+            """
+            ABSTRACT METHOD.  Sends a command to HIL service to command component.
+
+            :param self: This component.
+            :param cmd: Command to send component.
+            :return:
+            """
             pass
 
 
 class MicroClient(ComponentClient):
+    """
+    Client to send commands to Microcontrollers (HIA/HIB/LPA) on HIL.
+    """
+
     def __init__(self, name, host, cmd_port=8080, config=None):
+        """
+        Microcontroller HIL component
+
+        :param name:  Name of HIL component
+        :param host:  Hostname of HIL component (usually hil service)
+        :param cmd_port:  Port to use to command HIL component (usually hil service port)
+        :param config: Configuration dictionary for component.
+        """
         super().__init__(name, host, cmd_port=cmd_port, config=config)
 
     def configure_subcomponent(self, name, subcomponent_config):
+        """
+        Setup for client (there's very little here)
+
+        :param name: Name of subcomponent
+        :param subcomponent_config:
+        :return:
+        """
         self.subcomponent_name = name
 
     def command(self, cmd):
+        """
+        Send a command (always a serial command) to the HIL.
+
+        :param cmd: Command to send to microcontroller.
+        :return:
+        """
         cmd_client = VCUHIL_command(self.host, cmd_port=self.cmd_port)
         return cmd_client.command(command.Command(
             operation=command.Operation.SERIAL_CMD,
@@ -90,13 +180,38 @@ class MicroClient(ComponentClient):
 
 
 class PowerSupplyClient(ComponentClient):
+    """
+    Client to send commands to VCU Power Supply on HIL.
+    """
+
     def __init__(self, name, host, cmd_port=8080, config=None):
+        """
+        Power Supply HIL component
+
+        :param name:  Name of HIL component
+        :param host:  Hostname of HIL component (usually hil service)
+        :param cmd_port:  Port to use to command HIL component (usually hil service port)
+        :param config: Configuration dictionary for component.
+        """
         super().__init__(name, host, cmd_port=cmd_port, config=config)
 
     def configure_subcomponent(self, name, subcomponent_config):
+        """
+        Setup for client (there's very little here)
+
+        :param name: Name of subcomponent
+        :param subcomponent_config:
+        :return:
+        """
         self.subcomponent_name = name
 
     def command(self, cmd):
+        """
+        Send a command to the HIL.
+
+        :param cmd: Command to send to microcontroller.
+        :return:
+        """
         cmd_client = VCUHIL_command(self.host, cmd_port=self.cmd_port)
         return cmd_client.command(cmd)
 
@@ -109,29 +224,84 @@ class PowerSupplyClient(ComponentClient):
         ))
 
     def set_voltage_channel1(self, voltage):
+        """
+        Set channel 1 voltage.
+
+        :param voltage: Voltage setpoint
+        :return:
+        """
         return self._generic_command('set_voltage_channel1', float(voltage))
 
     def set_voltage_channel2(self, voltage):
+        """
+        Set channel 2 voltage.
+
+        :param voltage: Voltage Setpoint
+        :return:
+        """
         return self._generic_command('set_voltage_channel2', float(voltage))
 
     def set_current_channel1(self, current):
+        """
+        Set channel 1 maximum current.
+
+        :param current: Current setpoint
+        :return:
+        """
         return self._generic_command('set_current_channel1', float(current))
 
     def set_current_channel2(self, current):
+        """
+        Set channel 2 maximum current.
+
+        :param current: Current setpoint
+        :return:
+        """
         return self._generic_command('set_current_channel2', float(current))
 
     def set_output_channel1(self, boolean):
+        """
+        Set channel 1 output state
+
+        :param boolean: True for enable, False for disable
+        :return:
+        """
         return self._generic_command('set_output_channel1', bool(boolean))
 
     def set_output_channel2(self, boolean):
+        """
+        Set channel 2 output state
+
+        :param boolean: True for enable, False for disable
+        :return:
+        """
         return self._generic_command('set_output_channel2', bool(boolean))
 
 class VCUClient(ComponentClient):
+    """
+    Client to send commands to VCU on HIL.
+    """
+
     def __init__(self, name, host, cmd_port=8080, config=None):
+        """
+        Power Supply HIL component
+
+        :param name:  Name of HIL component
+        :param host:  Hostname of HIL component (usually hil service)
+        :param cmd_port:  Port to use to command HIL component (usually hil service port)
+        :param config: Configuration dictionary for component.
+        """
         self.subcomponents = {}
         super().__init__(name, host, cmd_port=cmd_port, config=config)
 
     def configure_subcomponent(self, name, subcomponent_config):
+        """
+        Configure a subcomponent of the HIL
+
+        :param name: Name of subcomponent
+        :param subcomponent_config: Dictionary of configuration options for subcomponent
+        :return:
+        """
         if subcomponent_config['type'] == 'sorensen_psu':
             self.subcomponents[name] = PowerSupplyClient(f'{self.name}.{name}', self.host,
                                                          cmd_port=self.cmd_port,
@@ -143,6 +313,12 @@ class VCUClient(ComponentClient):
                                                    config=subcomponent_config)
 
     def command(self, cmd):
+        """
+        Send a command to the VCU on the HIL
+
+        :param cmd: Command object to send.
+        :return:
+        """
         cmd_client = VCUHIL_command(self.host, cmd_port=self.cmd_port)
         if cmd.operation == command.Operation.BRING_OFFLINE:
             return cmd_client.command(command.Command(
@@ -173,13 +349,30 @@ class VCUClient(ComponentClient):
 
 
 class VCUHILClient(object):
+    """
+    Combined telemetry and command client for VCU on HIL.
+    """
+
     def __init__(self, host, cmd_port=8080, telem_port=8888):
+        """
+        Generate a combined client for VCU.
+
+        :param host: Hostname of VCU HIL
+        :param cmd_port: Command port of VCU HIL (default is 8080)
+        :param telem_port: Telemetry port of VCU HIL (default is 8888)
+        """
         self.host = host
         self.telem_port = telem_port
         vcu_config = hil_config.VCU_CONFIGS
         self.vcus = {name:VCUClient(name, host, cmd_port, config) for name,config in vcu_config.items()}
 
     def get_telem_dict(self):
+        """
+        Get current telemetry points from server.
+
+        :return: Current telemetry points.
+        """
+
         tlm = VCUHIL_telemetry(self.host, self.telem_port)
         lines = tlm.get_telem()
         return lines.get_channels_list()

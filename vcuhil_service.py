@@ -10,7 +10,6 @@ from contextvars import ContextVar
 import logging
 import asyncio
 import argparse
-import time
 import sys
 import json
 import pprint
