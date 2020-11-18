@@ -99,24 +99,6 @@ async def run(state):
     return state
 
 
-async def periodic_run(cycle_time, state):
-    """
-    DO NOT USE, you probably want 'run' instead.
-
-    This function is a helper that helps to set up a periodically executing function.
-
-    :param cycle_time:  How often to run function
-    :param state: State to pass between runs
-    :return: Ouptut state of run function
-    """
-    start_time = time.time()
-    new_state = await run(state)
-    # Calculate time to wait
-    wait_time = cycle_time - (time.time() - start_time)
-    await asyncio.sleep(wait_time) # IDLE Time
-    return new_state
-
-
 async def json_server(reader, writer):
     data = await reader.readline()
     cmd_queue = command_queue.get()
@@ -168,7 +150,7 @@ async def main(args):
 
     while not state['done']:
         log.debug('Launching new task')
-        task = asyncio.create_task(periodic_run(0, state))
+        task = asyncio.create_task(run(state))
         log.debug('Waiting for Task to end')
         await asyncio.sleep(CYCLE_TIME)
         log.debug('Task should have ended by now....')

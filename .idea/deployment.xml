@@ -5,7 +5,7 @@
       <paths name="VCUHIL">
         <serverdata>
           <mappings>
-            <mapping deploy="/tmp/py_33435" local="$PROJECT_DIR$" web="/" />
+            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
