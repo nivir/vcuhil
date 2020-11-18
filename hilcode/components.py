@@ -221,6 +221,7 @@ class VCU(Component):
                     config_dev,
                     VCUSGA(config_dict['odb'])
                 )
+                await self.components[config_dev].setup('sga')
             elif 'hpa' in config_dict['type']:
                 self.components[config_dev] = HPA(
                     config_dev,
@@ -229,6 +230,7 @@ class VCU(Component):
                         config_dict['sga_odb']
                     )
                 )
+                await self.components[config_dev].setup('hpa')
             elif 'vlan' in config_dict['type']:
                 self.components[config_dev] = Component(config_dev)
             else:
@@ -248,10 +250,10 @@ class VCU(Component):
         return await self._ping_hpa_through_sga()
 
     async def _ping_sga(self):
-        return await self.components['sga'].is_connected()
+        return self.components['sga'].is_connected()
 
     async def _ping_hpa_through_sga(self):
-        return await self.components['hpa'].is_connected()
+        return self.components['hpa'].is_connected()
 
 
 class Micro(Component):
@@ -273,9 +275,6 @@ class Micro(Component):
 
     async def close(self):
         return await self.client.close()
-
-    def is_connected(self):
-        return self.client.is_connected()
 
     async def gather_telemetry(self):
         try:
@@ -305,20 +304,23 @@ class HPA(Component):
 
     async def setup(self, name):
         await super().setup(name)
-        self.client.setup()
-        self.telemetry.add_telemetry_channel(TelemetryChannel('connected'))
+        await self.client.setup()
+        self.telemetry.add_telemetry_channel(TelemetryChannel('ssh_connected'))
 
     async def close(self):
         return await self.client.close()
 
     async def gather_telemetry(self):
-        self.telemetry.telemetry_channels['connected'].add_point(
+        self.telemetry.telemetry_channels['ssh_connected'].add_point(
             BooleanTelemetryPoint(
                 'connected',
                 time.time(),
                 self.client.is_connected()
             )
         )
+
+    def is_connected(self):
+        return self.client.is_connected()
 
 class SGA(Component):
     def __init__(self, name, client):
@@ -329,20 +331,23 @@ class SGA(Component):
 
     async def setup(self, name):
         await super().setup(name)
-        self.client.setup()
-        self.telemetry.add_telemetry_channel(TelemetryChannel('connected'))
+        await self.client.setup()
+        self.telemetry.add_telemetry_channel(TelemetryChannel('ssh_connected'))
 
     async def close(self):
         return await self.client.close()
 
     async def gather_telemetry(self):
-        self.telemetry.telemetry_channels['connected'].add_point(
+        self.telemetry.telemetry_channels['ssh_connected'].add_point(
             BooleanTelemetryPoint(
                 'connected',
                 time.time(),
                 self.client.is_connected()
             )
         )
+
+    def is_connected(self):
+        return self.client.is_connected()
 
 class PowerSupply(Component):
     def __init__(self, name, client, defaults):

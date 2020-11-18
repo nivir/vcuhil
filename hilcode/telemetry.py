@@ -122,6 +122,10 @@ class TelemetryKeeper(object):
     def current_data_dict(self, prefix=''):
         # All Telem Channels
         data = {f'{prefix}{self.name}.{name}':x.pop_points() for name, x in self.telemetry_channels.items()}
+        # TODO(bhendrix) FIX HACK, why are we doing it this way again?
+        for name, points in data.items():
+            for point in points:
+                point['name'] = name
         # All telem keepers
         for tk_name, tk in self.telemetry_keepers.items():
             tk_data = tk.current_data_dict(prefix=f'{prefix}{self.name}.')
