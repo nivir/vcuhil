@@ -149,6 +149,7 @@ VCU_CONFIGS = {
         'hpa': {
             'type': 'hpa',
             'hostname': '172.16.66.2',
+            'sga_odb': 'vcu-donatello',
             'username': 'root',
             'password': 'root',
         },

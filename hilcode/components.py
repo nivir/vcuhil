@@ -217,11 +217,22 @@ class VCU(Component):
                 await self.components[config_dev].client.connect(config_dict['serial'], baudrate=config_dict['baudrate'])
                 await self.components[config_dev].setup(f'micro_{config_dev}')
             elif 'sga' in config_dict['type']:
-                self.components[config_dev] = SGA(config_dev, VCUSGA(config_dict['odb']))
+                self.components[config_dev] = SGA(
+                    config_dev,
+                    VCUSGA(config_dict['odb'])
+                )
             elif 'hpa' in config_dict['type']:
-                self.components[config_dev] = HPA(config_dev, VCUHPA(config_dict['hostname'])) #TODO(bhendrix) replace with actual object
+                self.components[config_dev] = HPA(
+                    config_dev,
+                    VCUHPA(
+                        config_dict['hostname'],
+                        config_dict['sga_odb']
+                    )
+                )
             elif 'vlan' in config_dict['type']:
-                self.components[config_dev] = Component(config_dev) #TODO(bhendrix) replace with actual object
+                self.components[config_dev] = Component(config_dev)
+            else:
+                raise RuntimeError(f'Unexpected VCU subcomponent type {config_dict["type"]}.')
         await super().setup(name)
 
     async def query_power_status(self):
@@ -236,15 +247,11 @@ class VCU(Component):
             return sga
         return await self._ping_hpa_through_sga()
 
-
     async def _ping_sga(self):
-        return await self.components['sga'].client.ping()
+        return await self.components['sga'].is_connected()
 
     async def _ping_hpa_through_sga(self):
-        sga_conn = await self.components['sga'].client.connect()
-        hpa_status = await self.components['hpa'].client.ping_through_odb(sga_conn)
-        sga_conn.close()
-        return hpa_status
+        return await self.components['hpa'].is_connected()
 
 
 class Micro(Component):
@@ -266,6 +273,9 @@ class Micro(Component):
 
     async def close(self):
         return await self.client.close()
+
+    def is_connected(self):
+        return self.client.is_connected()
 
     async def gather_telemetry(self):
         try:
@@ -293,12 +303,46 @@ class HPA(Component):
         self.client = client
         self.telemetry = TelemetryKeeper(name)
 
+    async def setup(self, name):
+        await super().setup(name)
+        self.client.setup()
+        self.telemetry.add_telemetry_channel(TelemetryChannel('connected'))
+
+    async def close(self):
+        return await self.client.close()
+
+    async def gather_telemetry(self):
+        self.telemetry.telemetry_channels['connected'].add_point(
+            BooleanTelemetryPoint(
+                'connected',
+                time.time(),
+                self.client.is_connected()
+            )
+        )
+
 class SGA(Component):
     def __init__(self, name, client):
         super().__init__(name)
         self.type = 'SGA'
         self.client = client
         self.telemetry = TelemetryKeeper(name)
+
+    async def setup(self, name):
+        await super().setup(name)
+        self.client.setup()
+        self.telemetry.add_telemetry_channel(TelemetryChannel('connected'))
+
+    async def close(self):
+        return await self.client.close()
+
+    async def gather_telemetry(self):
+        self.telemetry.telemetry_channels['connected'].add_point(
+            BooleanTelemetryPoint(
+                'connected',
+                time.time(),
+                self.client.is_connected()
+            )
+        )
 
 class PowerSupply(Component):
     def __init__(self, name, client, defaults):

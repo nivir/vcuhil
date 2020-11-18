@@ -5,52 +5,59 @@ import logging
 
 log = logging.getLogger(__name__)
 
-
-def _trim_string(string):
-        return str(string).strip()
-
+PINGER_CYCLE_TIME = 0.5
 
 class VCUSGA(object):
     def __init__(self, host, port=22):
         self.host = host
         self.port = port
-        self.reader = None
-        self.writer = None
+        self._pinger_task = None
+        self._pinger_connected = asyncio.Event()
+        self._pinger_stop = asyncio.Event()
 
-    async def connect(self):
-        return await asyncssh.connect(self.host, port=self.port, username = 'root', password='root', login_timeout=1)
+    def is_connected(self):
+        return self._pinger_connected.is_set()
 
-
-    async def ping(self):
-        logging.debug('SGA PINGING')
-        try:
-            conn = await self.connect()
-            result = await conn.run('echo "Hello!"', check=True)
-            conn.close()
-            if result.exit_status == 0:
-                # ping succeeded
-                logging.debug('SGA Available')
-                return True
-            else:
-                # ping failed
+    async def pinger_loop(self):
+        logging.debug('Starting SGA Pinger')
+        while not self._pinger_stop.is_set():
+            await asyncio.sleep(PINGER_CYCLE_TIME)
+            try:
+                conn = await self._connect()
+                result = await conn.run('echo "Hello!"', check=True)
+                conn.close()
+                if result.exit_status == 0:
+                    # ping succeeded
+                    logging.debug('SGA Available')
+                    self._pinger_connected.set()
+                else:
+                    # ping failed
+                    logging.debug('SGA Not Available')
+                    self._pinger_connected.clear()
+            except gaierror:
                 logging.debug('SGA Not Available')
-                return False
-        except gaierror:
-            logging.debug('SGA Not Available')
-            return False
-        except OSError:
-            logging.debug('SGA Not Available')
-            return False
+                self._pinger_connected.clear()
+            except OSError:
+                logging.debug('SGA Not Available')
+                self._pinger_connected.clear()
 
 
-    async def close(self):
-        self.writer.close()
-        await self.writer.wait_closed()
+    async def setup(self):
+        self._pinger_task = asyncio.create_task(self.pinger_loop())
 
-    async def command(self, command):
-        logging.debug(f'WRITING: {command}')
-        self.writer.write(f'{command}\n'.encode())
-        await asyncio.sleep(0.1)
+    def close(self):
+        self._pinger_stop.set()
+
+    async def _connect(self):
+        return await asyncssh.connect(
+            self.host,
+            port=self.port,
+            username = 'root',
+            password='root',
+            login_timeout=1
+        )
+
+
 
 
 
