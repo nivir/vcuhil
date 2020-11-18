@@ -7,7 +7,6 @@ import pprint
 import asyncio
 import time
 from transitions import Machine
-from pint import UnitRegistry
 from hilcode.telemetry import TelemetryKeeper, TelemetryChannel, BooleanTelemetryPoint, StringTelemetryPoint, UnitTelemetryPoint
 from hilcode.command import CommandWarning, Operation
 import logging
