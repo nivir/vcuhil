@@ -128,9 +128,17 @@ class VCU(Component):
             log.debug(f'VCU {self.name} booted.')
             self.booted()
 
+    async def exec_idle(self):
+        if not await self.ping_hpa_sga():
+            log.debug(f'VCU {self.name} disconnected')
+            self.reboot()
+
+
     async def check_state(self):
         if self.state == 'booting':
             return await self.exec_booting()
+        elif self.state == 'idle':
+            return await self.exec_idle()
         else:
             pass
 

@@ -35,7 +35,7 @@ class VCUMicroDevice(object):
         logging.debug('CONNECTED to serial device')
 
     async def close(self):
-        self._line_reader_exit.set()
+        self.line_reader_exit.set()
         while not self._line_reader_task.done():
             await asyncio.sleep(0.1)
         self.writer.close()

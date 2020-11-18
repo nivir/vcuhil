@@ -24,42 +24,37 @@ class VCUHPA(object):
             tunnel=sga_connection,
             username = 'root',
             password='root',
-            login_timeout=1
         )
 
     async def _sga_connect(self):
         return await asyncssh.connect(
-            self.host,
-            port=self.port,
+            self.sga_host,
+            port=self.sga_port,
             username = 'root',
             password='root',
-            login_timeout=1
         )
 
     async def pinger_loop(self):
         logging.debug('Starting HPA Pinger')
         while not self._pinger_stop.is_set():
+            logging.info('HPA PING')
             await asyncio.sleep(PINGER_CYCLE_TIME)
             try:
-                sga_conn = await self._sga_connect()
-                conn = await self._connect_through_odb(sga_conn)
-                result = await conn.run('echo "Hello!"', check=True)
-                conn.close()
-                sga_conn.close()
+                async with await self._sga_connect() as sga_conn:
+                    async with await self._connect_through_odb(sga_conn) as conn:
+                        result = await conn.run('echo "Hello!"', check=True)
                 if result.exit_status == 0:
                     # ping succeeded
-                    logging.debug('HPA Available')
+                    logging.info('HPA Available')
                     self._pinger_connected.set()
                 else:
                     # ping failed
                     logging.debug('HPA Not Available')
                     self._pinger_connected.clear()
-            except gaierror:
+            except Exception:
                 logging.debug('HPA Not Available')
                 self._pinger_connected.clear()
-            except OSError:
-                logging.debug('HPA Not Available')
-                self._pinger_connected.clear()
+        logging.info('HPA PING QUIT')
 
     def is_connected(self):
         return self._pinger_connected.is_set()
@@ -67,14 +62,7 @@ class VCUHPA(object):
     async def setup(self):
         self._pinger_task = asyncio.create_task(self.pinger_loop())
 
-    def close(self):
+    async def close(self):
         self._pinger_stop.set()
-
-    async def _connect(self):
-        return await asyncssh.connect(
-            self.host,
-            port=self.port,
-            username = 'root',
-            password='root',
-            login_timeout=1
-        )
+        while not self._pinger_task.done():
+            await asyncio.sleep(0.1)
