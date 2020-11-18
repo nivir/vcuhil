@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="d61998a4-b3a2-413f-a8c2-564d66f7fd55" name="VCUHIL">
+        <fileTransfer accessType="SFTP" host="172.31.255.78" port="22" sshConfigId="5cdebdf6-0e6b-4863-abb1-8961e5b37a93" sshConfig="baird.hendrix@172.31.255.78:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
