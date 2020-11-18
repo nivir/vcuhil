@@ -60,6 +60,8 @@ class VCUHPA(object):
         return self._pinger_connected.is_set()
 
     async def setup(self):
+        self._pinger_stop.clear()
+        self._pinger_connected.clear()
         self._pinger_task = asyncio.create_task(self.pinger_loop())
 
     async def close(self):
