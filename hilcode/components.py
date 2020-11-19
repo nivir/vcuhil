@@ -313,6 +313,8 @@ class HPA(Component):
         await super().setup(name)
         await self.client.setup()
         self.telemetry.add_telemetry_channel(TelemetryChannel('ssh_connected'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('uname_version'))
+        self.telemetry.add_telemetry_channel(TelemetryChannel('nvidia_version'))
 
     async def close(self):
         return await self.client.close()
@@ -323,6 +325,20 @@ class HPA(Component):
                 'connected',
                 time.time(),
                 self.client.is_connected()
+            )
+        )
+        self.telemetry.telemetry_channels['uname_version'].add_point(
+            StringTelemetryPoint(
+                'uname_version',
+                time.time(),
+                self.client.uname_version()
+            )
+        )
+        self.telemetry.telemetry_channels['nvidia_version'].add_point(
+            StringTelemetryPoint(
+                'nvidia_version',
+                time.time(),
+                self.client.nvidia_version()
             )
         )
 

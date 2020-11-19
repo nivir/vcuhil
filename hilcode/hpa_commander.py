@@ -15,6 +15,9 @@ class VCUHPA(object):
         self._pinger_task = None
         self._pinger_connected = asyncio.Event()
         self._pinger_stop = asyncio.Event()
+        self._pinger_version_uname = asyncio.Queue(1)
+        self._pinger_version_nvidia = asyncio.Queue(1)
+
 
     async def pinger_loop(self):
         while not self._pinger_stop.is_set():
@@ -35,10 +38,19 @@ class VCUHPA(object):
                         password='root',
                         login_timeout=10,
                     ), timeout=10) as conn:
-                        result = await asyncio.wait_for(conn.run('echo "Test"', check=True), timeout=10)
-                if result.exit_status == 0:
+                        uname_result = await asyncio.wait_for(conn.run(
+                            'uname -a', check=True), timeout=10)
+                        nvidia_result = await asyncio.wait_for(conn.run(
+                            'cat /usr/libnvidia/version-pdk.txt', check=True), timeout=10)
+                if uname_result.exit_status == 0 and nvidia_result.exit_status == 0:
                     # ping succeeded
                     self._pinger_connected.set()
+                    if self._pinger_version_uname.full():
+                        await self._pinger_version_uname.get()
+                    await self._pinger_version_uname.put(uname_result.stdout)
+                    if self._pinger_version_nvidia.full():
+                        await self._pinger_version_nvidia.get()
+                    await self._pinger_version_uname.put(nvidia_result.stdout)
                 else:
                     # ping failed
                     self._pinger_connected.clear()
@@ -47,6 +59,18 @@ class VCUHPA(object):
 
     def is_connected(self):
         return self._pinger_connected.is_set()
+
+    def uname_version(self):
+        try:
+            return self._pinger_version_uname.get_nowait()
+        except asyncio.QueueEmpty:
+            return 'not_connected'
+
+    def nvidia_version(self):
+        try:
+            return self._pinger_version_nvidia.get_nowait()
+        except asyncio.QueueEmpty:
+            return 'not_connected'
 
     async def setup(self):
         self._pinger_stop.clear()
