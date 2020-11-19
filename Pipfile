@@ -11,6 +11,7 @@ asyncssh = "*"
 pint = "*"
 telnetlib3 = "*"
 pyserial-asyncio = "*"
+aiohttp = "*"
 
 [requires]
 python_version = "3.9"

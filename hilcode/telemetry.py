@@ -14,6 +14,8 @@ class TelemetryJsonLine(object):
                 tc = StringTelemetryPoint(value['name'], timestamp, value['value'])
             elif value['type'] == 'boolean':
                 tc = BooleanTelemetryPoint(value['name'], timestamp, value['value'])
+            elif value['type'] == 'float':
+                tc = FloatTelemetryPoint(value['name'], timestamp, value['value'])
             elif value['type'] == 'unit':
                 tc = UnitTelemetryPoint(value['name'], timestamp, value['value'], value['unit'])
             else:
@@ -78,22 +80,43 @@ class BooleanTelemetryPoint(TelemetryPoint):
         super().__init__(name, timestamp, value)
         self.type = 'boolean'
 
-class UnitTelemetryPoint(TelemetryPoint):
+class FloatTelemetryPoint(TelemetryPoint):
+    def __init__(self, name, timestamp, value):
+        super().__init__(name, timestamp, value)
+        self.type = 'float'
+
+class UnitTelemetryPoint(FloatTelemetryPoint):
     def __init__(self, name, timestamp, value, unit):
         super().__init__(name, timestamp, value)
-        ureg = UnitRegistry()
-        self.unit = getattr(ureg, unit)
-        self.value = value * self.unit
+        self.unit = unit
+        self.value = value
         self.type = 'unit'
 
     def get_dict(self):
         return {
             'name': self.name,
             'timestamp': self.timestamp,
-            'value': self.value.magnitude,
+            'value': self.value,
             'type': self.type,
-            'unit': str(self.unit)
+            'unit': self.unit
         }
+
+# class UnitTelemetryPoint(TelemetryPoint):
+#     def __init__(self, name, timestamp, value, unit):
+#         super().__init__(name, timestamp, value)
+#         ureg = UnitRegistry()
+#         self.unit = getattr(ureg, unit)
+#         self.value = value * self.unit
+#         self.type = 'unit'
+#
+#     def get_dict(self):
+#         return {
+#             'name': self.name,
+#             'timestamp': self.timestamp,
+#             'value': self.value.magnitude,
+#             'type': self.type,
+#             'unit': str(self.unit)
+#         }
 
 
 class TelemetryKeeper(object):

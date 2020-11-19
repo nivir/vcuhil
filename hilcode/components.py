@@ -7,7 +7,7 @@ import pprint
 import asyncio
 import time
 from transitions import Machine
-from hilcode.telemetry import TelemetryKeeper, TelemetryChannel, BooleanTelemetryPoint, StringTelemetryPoint, UnitTelemetryPoint
+from hilcode.telemetry import TelemetryKeeper, TelemetryChannel, BooleanTelemetryPoint, StringTelemetryPoint, UnitTelemetryPoint, FloatTelemetryPoint
 from hilcode.command import CommandWarning, Operation
 import logging
 
@@ -178,9 +178,8 @@ class VCU(Component):
 
     async def desetup(self):
         logging.debug(f'VCU {self.name} is being desetup')
-        keys = self.components.keys()
-        for comp_name in keys:
-            await self.components[comp_name].close()
+        for comp_name, comp in self.components.items():
+            await comp.close()
             self.telemetry.purge(comp_name)
         self.components = {}
 

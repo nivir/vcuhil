@@ -16,11 +16,13 @@ import pprint
 
 CYCLE_TIME = 1
 
-logging.basicConfig(level=logging.INFO,
+LOG_LEVEL = logging.INFO
+
+logging.basicConfig(level=LOG_LEVEL,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M')
+                    datefmt='%m-%d %H:%M:%S')
 log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
+log.setLevel(LOG_LEVEL)
 
 # Globals
 command_queue = ContextVar('command_queue')
@@ -42,7 +44,7 @@ async def setup(args):
 
     # Setup Components
     await hil.setup('VCU HIL')
-    logging.info('-=NINJA TURTLES GO=-')
+    log.info('-=NINJA TURTLES GO=-')
 
     return {
         'done': False,
@@ -82,19 +84,23 @@ async def run(state):
     log.debug('Command complete, now getting telemetry')
     await hil.gather_telemetry()
     ts_data = hil.telemetry.timestamped_data()
-    logging.debug(pprint.pformat(ts_data))
+    log.debug('Telemetry Got')
+    log.debug(pprint.pformat(ts_data))
 
     ts_data_json = json.dumps(ts_data)
+    log.debug('Telem to socket')
     # Telem Out
     if tlm_queue.full():
         await telemetry_queue.get()
     tlm_queue.put_nowait(f'{ts_data_json}\n')
+    log.debug('Telem to file')
 
     # Write telem to log file
     with open(log_filename, 'a') as lf:
         lf.write(f'{ts_data_json}\n')
 
     # Return state for next processing round
+    log.debug('End cycle')
     return state
 
 
@@ -159,7 +165,7 @@ async def main(args):
         log.debug('Task Complete, saving results')
         state = task.result()
     # No longer running, 'done' called
-    logging.info('Service Terminated')
+    log.info('Service Terminated')
     cmd_factory.close()
     telem_factory.close()
     sys.exit(0) # Terminated properly

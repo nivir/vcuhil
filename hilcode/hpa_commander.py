@@ -20,22 +20,22 @@ class VCUHPA(object):
         while not self._pinger_stop.is_set():
             await asyncio.sleep(PINGER_CYCLE_TIME)
             try:
-                async with await asyncssh.connect(
+                async with await asyncio.wait_for(asyncssh.connect(
                     self.sga_host,
                     port=self.sga_port,
                     username = 'root',
                     password='root',
                     login_timeout=10,
-                ) as sga_conn:
-                    async with await asyncssh.connect(
+                ), timeout=10) as sga_conn:
+                    async with await asyncio.wait_for(asyncssh.connect(
                         self.host,
                         port=self.port,
                         tunnel=sga_conn,
                         username = 'root',
                         password='root',
                         login_timeout=10,
-                    ) as conn:
-                        result = await conn.run('echo "Test"', check=True)
+                    ), timeout=10) as conn:
+                        result = await asyncio.wait_for(conn.run('echo "Test"', check=True), timeout=10)
                 if result.exit_status == 0:
                     # ping succeeded
                     self._pinger_connected.set()
@@ -54,6 +54,8 @@ class VCUHPA(object):
         self._pinger_task = asyncio.create_task(self.pinger_loop())
 
     async def close(self):
+        log.debug('closing hpa')
         self._pinger_stop.set()
         while not self._pinger_task.done():
             await asyncio.sleep(0.1)
+        log.debug('closed hpa')

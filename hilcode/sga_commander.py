@@ -21,14 +21,14 @@ class VCUSGA(object):
         while not self._pinger_stop.is_set():
             await asyncio.sleep(PINGER_CYCLE_TIME)
             try:
-                async with await asyncssh.connect(
+                async with await asyncio.wait_for(asyncssh.connect(
                     self.host,
                     port=self.port,
                     username = 'root',
                     password='root',
                     login_timeout=10,
-                    ) as conn:
-                    result = await conn.run('echo "Hello!"', check=True)
+                    ), timeout=10) as conn:
+                    result = await asyncio.wait_for(conn.run('echo "Test"', check=True), timeout=10)
                 if result.exit_status == 0:
                     # ping succeeded
                     self._pinger_connected.set()
@@ -38,16 +38,17 @@ class VCUSGA(object):
             except Exception:
                 self._pinger_connected.clear()
 
-
     async def setup(self):
         self._pinger_stop.clear()
         self._pinger_connected.clear()
         self._pinger_task = asyncio.create_task(self.pinger_loop())
 
     async def close(self):
+        log.debug('closing sga')
         self._pinger_stop.set()
         while not self._pinger_task.done():
             await asyncio.sleep(0.1)
+        log.debug('closed sga')
 
 
 
