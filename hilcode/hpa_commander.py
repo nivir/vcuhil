@@ -46,10 +46,10 @@ class VCUHPA(object):
                     # ping succeeded
                     self._pinger_connected.set()
                     if self._pinger_version_uname.full():
-                        await self._pinger_version_uname.get()
+                        self._pinger_version_uname.get_nowait()
                     await self._pinger_version_uname.put(uname_result.stdout)
                     if self._pinger_version_nvidia.full():
-                        await self._pinger_version_nvidia.get()
+                        self._pinger_version_nvidia.get_nowait()
                     await self._pinger_version_uname.put(nvidia_result.stdout)
                 else:
                     # ping failed
@@ -78,8 +78,6 @@ class VCUHPA(object):
         self._pinger_task = asyncio.create_task(self.pinger_loop())
 
     async def close(self):
-        log.debug('closing hpa')
         self._pinger_stop.set()
         while not self._pinger_task.done():
             await asyncio.sleep(0.1)
-        log.debug('closed hpa')
