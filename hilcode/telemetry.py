@@ -4,23 +4,23 @@ import pprint
 import json
 
 class TelemetryJsonLine(object):
-    def __init__(self, json_in):
+    def __init__(self, dump):
         self.telemetry = []
-        dump = json.loads(json_in)
-        for timestamp, value in dump:
-            if value['type'] == 'default':
-                tc = TelemetryPoint(value['name'], timestamp, value['value'])
-            elif value['type'] == 'string':
-                tc = StringTelemetryPoint(value['name'], timestamp, value['value'])
-            elif value['type'] == 'boolean':
-                tc = BooleanTelemetryPoint(value['name'], timestamp, value['value'])
-            elif value['type'] == 'float':
-                tc = FloatTelemetryPoint(value['name'], timestamp, value['value'])
-            elif value['type'] == 'unit':
-                tc = UnitTelemetryPoint(value['name'], timestamp, value['value'], value['unit'])
-            else:
-                raise RuntimeError('Telemetry type not recognized')
-            self.telemetry.append(tc)
+        for line in dump:
+            for timestamp, value in line:
+                if value['type'] == 'default':
+                    tc = TelemetryPoint(value['name'], timestamp, value['value'])
+                elif value['type'] == 'string':
+                    tc = StringTelemetryPoint(value['name'], timestamp, value['value'])
+                elif value['type'] == 'boolean':
+                    tc = BooleanTelemetryPoint(value['name'], timestamp, value['value'])
+                elif value['type'] == 'float':
+                    tc = FloatTelemetryPoint(value['name'], timestamp, value['value'])
+                elif value['type'] == 'unit':
+                    tc = UnitTelemetryPoint(value['name'], timestamp, value['value'], value['unit'])
+                else:
+                    raise RuntimeError('Telemetry type not recognized')
+                self.telemetry.append(tc)
 
     def __str__(self):
         return json.dumps(self.get_channels_list())

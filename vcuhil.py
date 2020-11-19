@@ -8,6 +8,7 @@ import hil_config
 import hilcode.command as command
 import hilcode.telemetry as telemetry
 import logging
+import requests
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -86,10 +87,9 @@ class VCUHIL_telemetry(object):
 
         :return: List of telemetry points from server
         """
-        cmd_socket = socket.create_connection((self.host, self.port))
-        r = cmd_socket.recvmsg(BUFFER_SIZE)
-        cmd_socket.close()
-        return telemetry.TelemetryJsonLine(r[0])
+        tlm_r = requests.get(f'http://{self.host}:{self.port}/')
+        tlm_j = tlm_r.json()
+        return telemetry.TelemetryJsonLine(tlm_j)
 
 
 class ComponentClient(object):

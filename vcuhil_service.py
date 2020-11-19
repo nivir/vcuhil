@@ -13,6 +13,7 @@ import argparse
 import sys
 import json
 import pprint
+from aiohttp import web
 
 CYCLE_TIME = 1
 
@@ -51,7 +52,7 @@ async def setup(args):
         'hil': hil,
         'log_filename': args['log_filename'],
         'command_queue': asyncio.Queue(),
-        'telemetry_queue': asyncio.LifoQueue()
+        'telemetry_queue': asyncio.Queue(200)
     }
 
 # Loop (every second)
@@ -87,15 +88,15 @@ async def run(state):
     log.debug('Telemetry Got')
     log.debug(pprint.pformat(ts_data))
 
-    ts_data_json = json.dumps(ts_data)
-    log.debug('Telem to socket')
+    log.debug('Telem to http')
     # Telem Out
     if tlm_queue.full():
-        await telemetry_queue.get()
-    tlm_queue.put_nowait(f'{ts_data_json}\n')
+        await tlm_queue.get()
+    tlm_queue.put_nowait(ts_data)
     log.debug('Telem to file')
 
     # Write telem to log file
+    ts_data_json = json.dumps(ts_data)
     with open(log_filename, 'a') as lf:
         lf.write(f'{ts_data_json}\n')
 
@@ -130,11 +131,12 @@ async def json_server(reader, writer):
     finally:
         writer.close()
 
-async def telem_server(reader, writer):
+async def handler(request):
     tlm_queue = telemetry_queue.get()
-    tl = await tlm_queue.get()
-    writer.write(str(tl).encode())
-    writer.close()
+    tl = []
+    while not tlm_queue.empty():
+        tl.append(await tlm_queue.get())
+    return web.Response(text=str(json.dumps(tl)))
 
 # Main Function
 async def main(args):
@@ -150,7 +152,13 @@ async def main(args):
 
 
     cmd_factory = await asyncio.start_server(json_server, *('localhost', args['parser_port']))
-    telem_factory = await asyncio.start_server(telem_server, *('localhost', args['telem_port']))
+
+    server = web.Server(handler)
+    runner = web.ServerRunner(server)
+    await runner.setup()
+    site = web.TCPSite(runner, 'localhost', args['telem_port'])
+    await site.start()
+
     log.debug(f'Starting up json server on port {args["parser_port"]}')
 
     while not state['done']:
@@ -167,7 +175,6 @@ async def main(args):
     # No longer running, 'done' called
     log.info('Service Terminated')
     cmd_factory.close()
-    telem_factory.close()
     sys.exit(0) # Terminated properly
 
 
