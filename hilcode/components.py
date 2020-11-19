@@ -234,8 +234,8 @@ class VCU(Component):
                 self.components[config_dev] = HPA(
                     config_dev,
                     VCUHPA(
-                        config_dict['hostname'],
-                        config_dict['sga_odb']
+                        config_dict['sga_odb'],
+                        config_dict['hostname']
                     )
                 )
                 await self.components[config_dev].setup('hpa')
