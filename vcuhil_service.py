@@ -89,7 +89,7 @@ async def execute_command(state, curr_command):
                 for upper_comp in stack:
                     await upper_comp.command_callstack(curr_command)
             # Send command to component
-            await comp.command(operation=curr_command.operation, options=curr_command.options)
+            return await comp.command(operation=curr_command.operation, options=curr_command.options)
         except CommandWarning:
             log.warning(f'FAILED COMMAND {curr_command}')
     else:
