@@ -15,9 +15,14 @@ import json
 import pprint
 from aiohttp import web
 
+DEBUG = False
+
 CYCLE_TIME = 1
 
-LOG_LEVEL = logging.INFO
+if DEBUG:
+    LOG_LEVEL = logging.DEBUG
+else:
+    LOG_LEVEL = logging.INFO
 
 logging.basicConfig(level=LOG_LEVEL,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -247,6 +252,6 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     try:
-        asyncio.run(main(vars(args)), debug=False)
+        asyncio.run(main(vars(args)), debug=DEBUG)
     except KeyboardInterrupt:
         print('Exiting...')
