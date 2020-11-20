@@ -23,7 +23,7 @@ CYCLE_TIME = 1
 if DEBUG:
     LOG_LEVEL = logging.DEBUG
 else:
-    LOG_LEVEL = logging.INFO
+    LOG_LEVEL = logging.WARNING
 
 logging.basicConfig(level=LOG_LEVEL,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -53,7 +53,7 @@ async def setup(args):
 
     # Setup Components
     await hil.setup('VCU HIL')
-    log.info('-=NINJA TURTLES GO=-')
+    log.warning('-=NINJA TURTLES GO=-')
 
     return {
         'done': False,
