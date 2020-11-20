@@ -192,13 +192,15 @@ async def main(args):
     :param args: Arguments from argparse
     :return: N/A
     """
+    # General State Setup
     state = await setup(args)
     command_queue.set(state['command_queue'])
     telemetry_queue.set(state['telemetry_queue'])
 
-
+    # Command Server Setup
     cmd_factory = await asyncio.start_server(json_server, *('localhost', args['parser_port']))
 
+    # Telemetry HTTP Server Setup
     app = web.Application()
     app.add_routes(routes)
     runner = web.AppRunner(app)
@@ -208,6 +210,7 @@ async def main(args):
 
     log.debug(f'Starting up json server on port {args["parser_port"]}')
 
+    # Main loop
     while not state['done']:
         log.debug('Launching new task')
         task = asyncio.create_task(run(state))
@@ -219,6 +222,7 @@ async def main(args):
             await asyncio.sleep(CYCLE_TIME)
         log.debug('Task Complete, saving results')
         state = task.result()
+
     # No longer running, 'done' called
     log.info('Service Terminated')
     cmd_factory.close()
