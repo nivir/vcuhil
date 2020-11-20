@@ -11,6 +11,9 @@ class CommandError(RuntimeError):
     pass
 
 class Operation(Enum):
+    """
+    Enumeration of all possible command operations for HIL
+    """
     NO_OP = 0
     PWR_SUPPLY_CMD = 1
     SERIAL_CMD = 2
@@ -24,44 +27,25 @@ class Operation(Enum):
     BOOTED_FORCE = 10
     VERSION_CHECK = 12
 
-async def execute_command(state, curr_command):
-    if curr_command.operation == Operation.NO_OP:
-        return state
-    elif curr_command.operation == Operation.PWR_SUPPLY_CMD or \
-        curr_command.operation == Operation.SERIAL_CMD or \
-        curr_command.operation == Operation.RECOVERY or \
-        curr_command.operation == Operation.RESTART or \
-        curr_command.operation == Operation.BRING_OFFLINE or\
-        curr_command.operation == Operation.POWER_OFF or\
-        curr_command.operation == Operation.ENABLE or\
-        curr_command.operation == Operation.BOOTED_FORCE:
-        logging.info(f'COMMAND RECEIVED: {str(curr_command)}')
-        return await generic_command(state, curr_command)
-    else:
-        RuntimeError(f'Operation {curr_command.operation} not recognized.')
-
-async def generic_command(state, curr_command):
-    # Get component to manipulate
-    stack, comp = state['hil'].get_component_cmdstack(curr_command.target)
-    try:
-        # Inform stack command is being sent
-        if stack is not None:
-            for upper_comp in stack:
-                await upper_comp.command_callstack(curr_command)
-        # Send command to component
-        await comp.command(operation=curr_command.operation, options=curr_command.options)
-    except CommandWarning:
-        log.warning(f'FAILED COMMAND {curr_command}')
-    # No change to state, so pass back
-    return state
-
 class Command(object):
+    """
+    Object representing a command sent to the HIL.
+    """
+
     def __init__(self,
                  json_data='',
                  operation=Operation.NO_OP,
                  options=None,
                  target=''
                  ):
+        """
+        Create a HIL command.
+
+        :param json_data: JSON data to build command from, or leave blank to pass in options manually.
+        :param operation: Must be an enum of type Operation, or a corresponding integer.  Represents type of operation command performs.
+        :param options: Command options, usually a dictionary contianing {'value':'', 'command':''} or the like depending on command.
+        :param target: Target of command (VCU, or subcomponent of VCU).  Convention is VCU.subcomponent
+        """
         if json_data == '':
             assert isinstance(operation, Operation)
             self.operation = operation
@@ -74,6 +58,11 @@ class Command(object):
             self.target = dict['target']
 
     def __str__(self):
+        """
+        String representation of command
+
+        :return: String represetation of command
+        """
         d = {'operation': self.operation.value, 'options': self.options, 'target': self.target}
         return f'{json.dumps(d)}\n'
 

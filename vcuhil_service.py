@@ -5,7 +5,7 @@
 # Imports
 from hil_config import VCU_CONFIGS
 from hilcode.components import VCU, HIL
-from hilcode.command import Command, Operation, execute_command
+from hilcode.command import Command, Operation, CommandWarning
 from contextvars import ContextVar
 import logging
 import asyncio
@@ -28,6 +28,7 @@ log.setLevel(LOG_LEVEL)
 # Globals
 command_queue = ContextVar('command_queue')
 telemetry_queue = ContextVar('telemetry_queue')
+routes = web.RouteTableDef()
 
 # Setup
 async def setup(args):
@@ -54,6 +55,38 @@ async def setup(args):
         'command_queue': asyncio.Queue(),
         'telemetry_queue': asyncio.Queue(200)
     }
+
+
+async def execute_command(state, curr_command):
+    """
+    Function for deciding how to execute command.
+
+    :param state: State of program
+    :param curr_command: Command to execute
+    """
+    if curr_command.operation == Operation.NO_OP:
+        return state
+    elif curr_command.operation == Operation.PWR_SUPPLY_CMD or \
+        curr_command.operation == Operation.SERIAL_CMD or \
+        curr_command.operation == Operation.RECOVERY or \
+        curr_command.operation == Operation.RESTART or \
+        curr_command.operation == Operation.BRING_OFFLINE or\
+        curr_command.operation == Operation.POWER_OFF or\
+        curr_command.operation == Operation.ENABLE or\
+        curr_command.operation == Operation.BOOTED_FORCE:
+        logging.info(f'COMMAND RECEIVED: {str(curr_command)}')
+        stack, comp = state['hil'].get_component_cmdstack(curr_command.target)
+        try:
+            # Inform stack command is being sent
+            if stack is not None:
+                for upper_comp in stack:
+                    await upper_comp.command_callstack(curr_command)
+            # Send command to component
+            await comp.command(operation=curr_command.operation, options=curr_command.options)
+        except CommandWarning:
+            log.warning(f'FAILED COMMAND {curr_command}')
+    else:
+        RuntimeError(f'Operation {curr_command.operation} not recognized.')
 
 # Loop (every second)
 async def run(state):
@@ -106,6 +139,12 @@ async def run(state):
 
 
 async def json_server(reader, writer):
+    """
+    JSON command socket server.
+
+    :param reader: Socket stream reader
+    :param writer: Socket stream writer
+    """
     data = await reader.readline()
     cmd_queue = command_queue.get()
     try:
@@ -131,12 +170,19 @@ async def json_server(reader, writer):
     finally:
         writer.close()
 
+@routes.get('/')
 async def handler(request):
+    """
+    HTTP Request Handler, for telemetry
+
+    :param request: Request to HTTP
+    :return: JSON response.
+    """
     tlm_queue = telemetry_queue.get()
     tl = []
     while not tlm_queue.empty():
         tl.append(await tlm_queue.get())
-    return web.Response(text=str(json.dumps(tl)))
+    return web.json_response(tl)
 
 # Main Function
 async def main(args):
@@ -153,8 +199,9 @@ async def main(args):
 
     cmd_factory = await asyncio.start_server(json_server, *('localhost', args['parser_port']))
 
-    server = web.Server(handler)
-    runner = web.ServerRunner(server)
+    app = web.Application()
+    app.add_routes(routes)
+    runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, 'localhost', args['telem_port'])
     await site.start()

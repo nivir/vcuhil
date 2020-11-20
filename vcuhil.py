@@ -375,7 +375,7 @@ class VCUHILClient(object):
 
         tlm = VCUHIL_telemetry(self.host, self.telem_port)
         lines = tlm.get_telem()
-        return lines.get_channels_list()
+        return lines.get_point_list()
 
 
 def print_action_help():

@@ -1,5 +1,5 @@
 from hilcode.supply_commander import SorensenXPF6020DP
-from hilcode.micro_commander import VCUMicroDevice
+from hilcode.micro_commander import VCUSerialDevice
 from hilcode.sga_commander import VCUSGA
 from hilcode.hpa_commander import VCUHPA
 import abc
@@ -220,7 +220,7 @@ class VCU(Component):
                 # Complete setup for power supply
                 await self.components[config_dev].setup('psu')
             elif 'micro' in config_dict['type']:
-                self.components[config_dev] = Micro(f'micro_{config_dev}', VCUMicroDevice())
+                self.components[config_dev] = Micro(f'micro_{config_dev}', VCUSerialDevice())
                 await self.components[config_dev].client.connect(config_dict['serial'], baudrate=config_dict['baudrate'])
                 await self.components[config_dev].setup(f'micro_{config_dev}')
             elif 'sga' in config_dict['type']:
