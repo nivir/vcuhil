@@ -25,14 +25,12 @@ if DEBUG:
 else:
     LOG_LEVEL = logging.INFO
 
-log_handler = logging.StreamHandler(sys.stdout)
-
 logging.basicConfig(level=LOG_LEVEL,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M:%S')
+                    datefmt='%m-%d %H:%M:%S',
+                    stream=sys.stdout)
 log = logging.getLogger(__name__)
 log.setLevel(LOG_LEVEL)
-log.addHandler(log_handler)
 
 # Globals
 command_queue = ContextVar('command_queue')
