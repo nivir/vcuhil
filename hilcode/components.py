@@ -293,7 +293,7 @@ class Micro(Component):
                     StringTelemetryPoint(
                         'serial_out',
                         line.time,
-                        str(line.data)
+                        line.data.decode()
                     )
                 )
         except asyncio.QueueEmpty:
