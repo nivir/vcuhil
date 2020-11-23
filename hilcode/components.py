@@ -422,6 +422,13 @@ class PowerSupply(Component):
     async def gather_telemetry(self):
         # Get Power Status
         power_status = await self.power_status()
+        self.telemetry.telemetry_channels['idn'].add_point(
+            StringTelemetryPoint(
+                'idn',
+                time.time(),
+                power_status[0]['idn']
+            )
+        )
         self.telemetry.telemetry_channels['pri_meas_volt'].add_point(
             UnitTelemetryPoint(
                 'pri_meas_volt',
@@ -503,6 +510,7 @@ class PowerSupply(Component):
         await super().gather_telemetry()
 
     def _setup_telemetry(self, name):
+        self.telemetry.add_telemetry_channel(TelemetryChannel('idn'))
         self.telemetry.add_telemetry_channel(TelemetryChannel('pri_meas_volt'))
         self.telemetry.add_telemetry_channel(TelemetryChannel('red_meas_volt'))
         self.telemetry.add_telemetry_channel(TelemetryChannel('pri_set_volt'))
