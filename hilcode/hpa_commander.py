@@ -43,6 +43,7 @@ class VCUHPA(object):
                     port=self.sga_port,
                     username = 'root',
                     password='root',
+                    preferred_auth='password',
                     login_timeout=10,
                 ), timeout=10) as sga_conn:
                     async with await asyncio.wait_for(asyncssh.connect(
@@ -51,6 +52,7 @@ class VCUHPA(object):
                         tunnel=sga_conn,
                         username = 'root',
                         password='root',
+                        preferred_auth='password',
                         login_timeout=10,
                     ), timeout=10) as conn:
                         uname_result = await asyncio.wait_for(conn.run(
