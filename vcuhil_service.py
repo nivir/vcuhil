@@ -143,7 +143,7 @@ async def run(state):
             ts_data_prejson = {
                 '@timestamp': datetime.datetime.utcfromtimestamp(timestamp).isoformat(),
                 'fields': {
-                    tpoint['name']: tpoint['value'],
+                    f'{tpoint["name"]}.value': tpoint['value'],
                     f'{tpoint["name"]}.type': tpoint['type']
                 },
                 'tags': tpoint['name'].split('.'),
