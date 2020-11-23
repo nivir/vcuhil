@@ -146,9 +146,7 @@ async def run(state):
                     'value': tpoint['value'],
                     'type': tpoint['type']
                 },
-                'tags': [
-                    tpoint['name']
-                ],
+                'tags': tpoint['name'].split('.'),
                 'user': 'vcuhil',
             }
             if tpoint['type'] == 'unit':
