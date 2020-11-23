@@ -46,6 +46,7 @@ class VCUSGA(object):
                     password='root',
                     login_timeout=10,
                     preferred_auth='password',
+                    known_hosts=None,
                     ), timeout=10) as conn:
                     result = await asyncio.wait_for(conn.run('echo "Test"', check=True), timeout=10)
                 if result.exit_status == 0:
