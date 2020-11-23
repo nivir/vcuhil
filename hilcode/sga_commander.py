@@ -53,8 +53,13 @@ class VCUSGA(object):
                 else:
                     # ping failed
                     self._pinger_connected.clear()
-            except Exception:
+            except asyncio.exceptions.TimeoutError:
                 self._pinger_connected.clear()
+            except OSError:
+                self._pinger_connected.clear()
+            except Exception as e:
+                log.error('WTF HPA ERROR!!!')
+                raise e
 
     async def setup(self):
         """
