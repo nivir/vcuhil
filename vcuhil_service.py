@@ -17,7 +17,7 @@ import pprint
 import datetime
 from aiohttp import web
 
-DEBUG = True
+DEBUG = False
 
 CYCLE_TIME = 1
 

@@ -268,6 +268,7 @@ class Micro(Component):
         super().__init__(name)
         self.type = 'Micro'
         self.client = client
+        self.telemetry = TelemetryKeeper(name)
 
     def all_configs(self):
         return {}
