@@ -66,7 +66,7 @@ class VCUSerialDevice(object):
         :param serial: Serial port URL (typically '/dev/ttyUSB0' or the like)
         :param baudrate: Baud rate of serial port (default is 115200 baud)
         """
-        logging.debug('CONNECTING to serial device')
+        logging.info(f'CONNECTING to serial device {serial} at baud rate {baudrate}')
         self.reader, self.writer = await serial_asyncio.open_serial_connection(url=serial, baudrate=baudrate)
         logging.debug('CONNECTED to serial device')
 
@@ -94,7 +94,10 @@ class VCUSerialDevice(object):
                 )
             except asyncio.TimeoutError:
                 # Buffer is clear
-                await asyncio.sleep(0.1)
+                pass
+            except Exception as e:
+                log.error('WTF!!!!')
+                raise e
 
     def get_line_nowait(self):
         """
