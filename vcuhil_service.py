@@ -137,9 +137,24 @@ async def run(state):
     log.debug('Telem to file')
 
     # Write telem to log file
-    ts_data_json = json.dumps(ts_data)
-    with open(log_filename, 'a') as lf:
-        lf.write(f'{ts_data_json}\n')
+    for timestamp, tpoints in ts_data.items():
+        for tpoint in tpoints:
+            ts_data_prejson = {
+                'vcuhil_timestamp' : timestamp,
+                'fields': {
+                    'value': tpoint['value'],
+                    'type': tpoint['type']
+                },
+                'tags': [
+                    tpoint['name']
+                ],
+                'user': 'vcuhil',
+            }
+            if tpoint['type'] == 'unit':
+                ts_data_prejson['fields']['unit'] = tpoint['unit']
+            ts_data_json = json.dumps(ts_data_prejson)
+            with open(log_filename, 'a') as lf:
+                lf.write(f'{ts_data_json}\n')
 
     # Return state for next processing round
     log.debug('End cycle')
