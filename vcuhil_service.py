@@ -143,14 +143,12 @@ async def run(state):
             ts_data_prejson = {
                 '@timestamp': datetime.datetime.utcfromtimestamp(timestamp).isoformat(),
                 'fields': {
-                    'value': tpoint['value'],
-                    'type': tpoint['type']
+                    tpoint['name']: tpoint['value'],
+                    f'{tpoint["name"]}.type': tpoint['type']
                 },
                 'tags': tpoint['name'].split('.'),
                 'user': 'vcuhil',
             }
-            if tpoint['type'] == 'unit':
-                ts_data_prejson['fields']['unit'] = tpoint['unit']
             ts_data_json = json.dumps(ts_data_prejson)
             with open(log_filename, 'a') as lf:
                 lf.write(f'{ts_data_json}\n')
