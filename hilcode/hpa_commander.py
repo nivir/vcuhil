@@ -74,7 +74,7 @@ class VCUHPA(object):
             except OSError:
                 self._pinger_connected.clear()
             except Exception as e:
-                log.error('WTF HPA ERROR!!!')
+                log.error(f'WTF HPA ERROR!!! {e}')
                 raise e
 
     def is_connected(self):
