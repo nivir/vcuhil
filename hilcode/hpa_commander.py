@@ -69,7 +69,7 @@ class VCUHPA(object):
                     await self._pinger_version_uname.put(uname_result.stdout)
                     if self._pinger_version_nvidia.full():
                         self._pinger_version_nvidia.get_nowait()
-                    await self._pinger_version_uname.put(nvidia_result.stdout)
+                    await self._pinger_version_nvidia.put(nvidia_result.stdout)
                 else:
                     # ping failed
                     self._pinger_connected.clear()
