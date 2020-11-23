@@ -29,6 +29,8 @@ class VCUHPA(object):
         self._pinger_stop = asyncio.Event()
         self._pinger_version_uname = asyncio.Queue(1)
         self._pinger_version_nvidia = asyncio.Queue(1)
+        self._pinger_last_version_uname = 'not connected'
+        self._pinger_last_version_nvidia = 'not connected'
 
 
     async def pinger_loop(self):
@@ -96,9 +98,13 @@ class VCUHPA(object):
         :return: String showing return of 'uname -a' from HPA
         """
         try:
-            return self._pinger_version_uname.get_nowait()
+            self._pinger_last_version_uname = self._pinger_version_uname.get_nowait()
+            return self._pinger_last_version_uname
         except asyncio.QueueEmpty:
-            return 'not_connected'
+            if self._pinger_connected.is_set():
+                return self._pinger_last_version_uname
+            else:
+                return 'not_connected'
 
     def nvidia_version(self):
         """
@@ -107,9 +113,13 @@ class VCUHPA(object):
         :return: String showing return of 'cat /usr/libnvidia/version-pdk.txt' from HPA
         """
         try:
-            return self._pinger_version_nvidia.get_nowait()
+            self._pinger_last_version_nvidia = self._pinger_version_nvidia.get_nowait()
+            return self._pinger_last_version_nvidia
         except asyncio.QueueEmpty:
-            return 'not_connected'
+            if self._pinger_connected.is_set():
+                return self._pinger_last_version_nvidia
+            else:
+                return 'not_connected'
 
     async def setup(self):
         """
