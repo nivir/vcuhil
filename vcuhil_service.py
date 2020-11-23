@@ -14,6 +14,7 @@ import argparse
 import sys
 import json
 import pprint
+import datetime
 from aiohttp import web
 
 DEBUG = True
@@ -140,7 +141,7 @@ async def run(state):
     for timestamp, tpoints in ts_data.items():
         for tpoint in tpoints:
             ts_data_prejson = {
-                'vcuhil_timestamp' : timestamp,
+                '@timestamp': datetime.datetime.utcfromtimestamp(timestamp).isoformat(),
                 'fields': {
                     'value': tpoint['value'],
                     'type': tpoint['type']
