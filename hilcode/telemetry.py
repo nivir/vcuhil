@@ -290,11 +290,30 @@ class TelemetryKeeper(object):
         :return: List of tuples containing (timestamp, data_point)
         """
         data = self.current_data_dict()
-        ts_list = []
+        ts_dict = {}
         for name, points in data.items():
             for point in points:
-                ts_list.append((point['timestamp'], point))
-        return ts_list
+                #remove extraneous timestamp
+                timestamp = point['timestamp']
+                if point['type'] == 'unit':
+                    point = {
+                        'name': point['name'],
+                        'type': point['type'],
+                        'value': point['value'],
+                        'unit': point['unit']
+                    }
+                else:
+                    point = {
+                        'name': point['name'],
+                        'type': point['type'],
+                        'value': point['value']
+                    }
+                # Create timestamped dict
+                if timestamp in ts_dict.keys():
+                    ts_dict[timestamp].append(point)
+                else:
+                    ts_dict[timestamp] = [point]
+        return ts_dict
 
 
 

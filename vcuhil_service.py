@@ -16,7 +16,7 @@ import json
 import pprint
 from aiohttp import web
 
-DEBUG = False
+DEBUG = True
 
 CYCLE_TIME = 1
 
