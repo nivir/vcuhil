@@ -154,6 +154,7 @@ async def run(state):
             ts_data_prejson = {
                 '@timestamp': datetime.datetime.utcfromtimestamp(timestamp).isoformat(),
                 'values': values,
+                'name': tpoint['name'],
                 'type': tpoint['type'],
                 'tags': tpoint['name'].split('.'),
                 'user': 'vcuhil',
