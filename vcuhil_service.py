@@ -143,10 +143,7 @@ async def run(state):
             if tpoint['type'] == 'unit':
                 values = {tpoint['name']: float(tpoint['value'])}
             elif tpoint['type'] =='string':
-                if isinstance(tpoint['value'], bytes):
-                    values = {tpoint['name']: tpoint['value'].decode()}
-                else:
-                    values = {tpoint['name']: str(tpoint['value'])}
+                values = {tpoint['name']: str(tpoint['value'])}
             elif tpoint['type'] == 'boolean':
                 values = {tpoint['name']: bool(tpoint['value'])}
             else:
@@ -159,8 +156,10 @@ async def run(state):
                 'tags': tpoint['name'].split('.'),
                 'user': 'vcuhil',
             }
+            print(ts_data_prejson)
             ts_data_json = json.dumps(ts_data_prejson)
             with open(log_filename, 'a') as lf:
+                #print(f'{ts_data_json}')
                 lf.write(f'{ts_data_json}\n')
 
     # Return state for next processing round

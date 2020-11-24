@@ -56,84 +56,108 @@ LIDAR_CONFIGS = {
 }
 
 VCU_CONFIGS = {
-    # 'leonardo': {
-    #     'vlan': {
-    #         'type': 'vlan',
-    #         'vlan': 11,
-    #     },
-    #     'sga': {
-    #         'type': 'sga',
-    #         'hostname': 'vcu-leonardo-sga',
-    #         'odb': 'vcu-leonardo-odb',
-    #         'serial': '/dev/tty_vcu_leonardo_sga',
-    #         'baudrate': 115200,
-    #     },
-    #     'hpa': {
-    #         'type': 'hpa',
-    #         'hostname': 'vcu-leonardo-hpa',
-    #         'serial': '/dev/tty_vcu_leonardo_hpa',
-    #         'baudrate': 115200,
-    #     },
-    #     'hia': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_leonardo_hia',
-    #         'baudrate': 115200,
-    #     },
-    #     'hib': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_leonardo_hib',
-    #         'baudrate': 115200,
-    #     },
-    #     'lpa': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_leonardo_lpa',
-    #         'baudrate': 115200,
-    #     },
-    #     'psu': {
-    #         'type': 'sorensen_psu',
-    #         'host': 'psu-leonardo',
-    #         'port': 9221,
-    #     }
-    # },
-    # 'michalangelo': {
-    #     'vlan': {
-    #         'type': 'vlan',
-    #         'vlan': 12,
-    #     },
-    #     'sga': {
-    #         'type': 'sga',
-    #         'hostname': 'vcu-michalangelo-sga',
-    #         'odb': 'vcu-michalangelo-odb',
-    #         'serial': '/dev/tty_vcu_michalangelo_sga',
-    #         'baudrate': 115200,
-    #     },
-    #     'hpa': {
-    #         'type': 'hpa',
-    #         'hostname': 'vcu-michalangelo-hpa',
-    #         'serial': '/dev/tty_vcu_michalangelo_hpa',
-    #         'baudrate': 115200,
-    #     },
-    #     'hia': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_michalangelo_hia',
-    #         'baudrate': 115200,
-    #     },
-    #     'hib': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_michalangelo_hib',
-    #         'baudrate': 115200,
-    #     },
-    #     'lpa': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_michalangelo_lpa',
-    #         'baudrate': 115200,
-    #     },
-    #     'psu': {
-    #         'type': 'sorensen_psu',
-    #         'host': 'psu-michalangelo',
-    #         'port': 9221,
-    #     }
-    # },
+    'leonardo': {
+        'vlan': {
+            'type': 'vlan',
+            'vlan': 11,
+        },
+        'sga': {
+            'type': 'sga',
+            'hostname': 'vcu-leonardo',
+            'odb': 'vcu-leonardo',
+            'username': 'root',
+            'password': 'root',
+        },
+        'hpa': {
+            'type': 'hpa',
+            'hostname': '172.16.66.2',
+            'sga_odb': 'vcu-leonardo',
+            'username': 'root',
+            'password': 'root',
+        },
+        'sga_serial': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_leonardo_sga',
+            'baudrate': 115200,
+        },
+        'hpa_serial': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_leonardo_hpa',
+            'baudrate': 115200,
+        },
+        'hia': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_leonardo_hia',
+            'baudrate': 115200,
+        },
+        'hib': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_leonardo_hib',
+            'baudrate': 115200,
+        },
+        'lpa': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_leonardo_lpa',
+            'baudrate': 115200,
+        },
+        'psu': {
+            'type': 'sorensen_psu',
+            'host': 'psu-leonardo',
+            'port': 9221,
+            'defaults': PSU_DEFAULTS,
+        }
+    },
+    'michalangelo': {
+        'vlan': {
+            'type': 'vlan',
+            'vlan': 12,
+        },
+        'sga': {
+            'type': 'sga',
+            'hostname': 'vcu-michalangelo',
+            'odb': 'vcu-michalangelo',
+            'username': 'root',
+            'password': 'root',
+        },
+        'hpa': {
+            'type': 'hpa',
+            'hostname': '172.16.66.2',
+            'sga_odb': 'vcu-michalangelo',
+            'username': 'root',
+            'password': 'root',
+        },
+        'sga_serial': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_michalangelo_sga',
+            'baudrate': 115200,
+        },
+        'hpa_serial': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_michalangelo_hpa',
+            'baudrate': 115200,
+        },
+        'hia': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_michalangelo_hia',
+            'baudrate': 115200,
+        },
+        'hib': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_michalangelo_hib',
+            'baudrate': 115200,
+        },
+        'lpa': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_michalangelo_lpa',
+            'baudrate': 115200,
+        },
+        'psu': {
+            'type': 'sorensen_psu',
+            'host': 'psu-michalangelo',
+            'port': 9221,
+            'defaults': PSU_DEFAULTS,
+        }
+    },
     'donatello': {
         'vlan': {
             'type': 'vlan',
@@ -185,45 +209,57 @@ VCU_CONFIGS = {
             'defaults': PSU_DEFAULTS,
         }
     },
-    # 'raphael': {
-    #     'vlan': {
-    #         'type': 'vlan',
-    #         'vlan': 14,
-    #     },
-    #     'sga': {
-    #         'type': 'sga',
-    #         'hostname': 'vcu-raphael-sga',
-    #         'odb': 'vcu-raphael-odb',
-    #         'serial': '/dev/tty_vcu_raphael_sga',
-    #         'baudrate': 115200,
-    #     },
-    #     'hpa': {
-    #         'type': 'hpa',
-    #         'hostname': 'vcu-raphael-hpa',
-    #         'serial': '/dev/tty_vcu_raphael_hpa',
-    #         'baudrate': 115200,
-    #     },
-    #     'hia': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_raphael_hia',
-    #         'baudrate': 115200,
-    #     },
-    #     'hib': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_raphael_hib',
-    #         'baudrate': 115200,
-    #     },
-    #     'lpa': {
-    #         'type': 'micro',
-    #         'serial': '/dev/tty_vcu_raphael_lpa',
-    #         'baudrate': 115200,
-    #     },
-    #     'psu': {
-    #         'type': 'sorensen_psu',
-    #         'host': 'psu-raphael',
-    #         'port': 9221,
-    #     }
-    # },
+    'raphael': {
+        'vlan': {
+            'type': 'vlan',
+            'vlan': 14,
+        },
+        'sga': {
+            'type': 'sga',
+            'hostname': 'vcu-raphael',
+            'odb': 'vcu-raphael',
+            'username': 'root',
+            'password': 'root',
+        },
+        'hpa': {
+            'type': 'hpa',
+            'hostname': '172.16.66.2',
+            'sga_odb': 'vcu-raphael',
+            'username': 'root',
+            'password': 'root',
+        },
+        'sga_serial': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_raphael_sga',
+            'baudrate': 115200,
+        },
+        'hpa_serial': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_raphael_hpa',
+            'baudrate': 115200,
+        },
+        'hia': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_raphael_hia',
+            'baudrate': 115200,
+        },
+        'hib': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_raphael_hib',
+            'baudrate': 115200,
+        },
+        'lpa': {
+            'type': 'micro',
+            'serial': '/dev/tty_vcu_raphael_lpa',
+            'baudrate': 115200,
+        },
+        'psu': {
+            'type': 'sorensen_psu',
+            'host': 'psu-raphael',
+            'port': 9221,
+            'defaults': PSU_DEFAULTS,
+        }
+    },
 }
 
 

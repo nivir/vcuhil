@@ -290,7 +290,7 @@ class Micro(Component):
                 line = self.client.get_line_nowait()
                 data = line.data
                 if isinstance(data, bytes):
-                    data = data.decode()
+                    data = data.decode('utf-8', 'backslashreplace')
                 log.debug(f'Serial Input from {self.name}: {line}')
                 self.telemetry.telemetry_channels['serial_out'].add_point(
                     StringTelemetryPoint(

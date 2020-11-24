@@ -18,7 +18,7 @@ class SerialLine(object):
         :param data: Serial line
         """
         self.time = timestamp
-        self.data = str(data)
+        self.data = data
 
     def __str__(self):
         """
@@ -27,15 +27,6 @@ class SerialLine(object):
         :return: Timestamp and serial line, in same string.
         """
         return f'{self.time}: {self.data}'
-
-def _trim_string(string):
-    """
-    Convenience function for removing whitespace from strings, nice place to change how strings are processed.
-
-    :param string: String to strip
-    :return: Stripped string
-    """
-    return str(string).strip()
 
 
 class VCUSerialDevice(object):
