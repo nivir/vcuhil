@@ -288,12 +288,15 @@ class Micro(Component):
         try:
             while self.client.line_available():
                 line = self.client.get_line_nowait()
+                data = line.data
+                if isinstance(b'', data):
+                    data = data.decode()
                 log.debug(f'Serial Input from {self.name}: {line}')
                 self.telemetry.telemetry_channels['serial_out'].add_point(
                     StringTelemetryPoint(
                         'serial_out',
                         line.time,
-                        line.data.decode()
+                        data
                     )
                 )
         except asyncio.QueueEmpty:
