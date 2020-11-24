@@ -141,14 +141,14 @@ async def run(state):
     for timestamp, tpoints in ts_data.items():
         for tpoint in tpoints:
             if tpoint['type'] == 'unit':
-                values = {'float': tpoint['value'], 'unit': tpoint['unit']}
+                values = {tpoint['name']: float(tpoint['value'])}
             elif tpoint['type'] =='string':
                 if isinstance(tpoint['value'], bytes):
-                    values = {'string': tpoint['value'].decode()}
+                    values = {tpoint['name']: tpoint['value'].decode()}
                 else:
-                    values = {'string': str(tpoint['value'])}
+                    values = {tpoint['name']: str(tpoint['value'])}
             elif tpoint['type'] == 'boolean':
-                values = {'boolean': bool(tpoint['value'])}
+                values = {tpoint['name']: bool(tpoint['value'])}
             else:
                 raise RuntimeError('type not recognized')
             ts_data_prejson = {
