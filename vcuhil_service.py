@@ -156,7 +156,6 @@ async def run(state):
                 'tags': tpoint['name'].split('.'),
                 'user': 'vcuhil',
             }
-            print(ts_data_prejson)
             ts_data_json = json.dumps(ts_data_prejson)
             with open(log_filename, 'a') as lf:
                 #print(f'{ts_data_json}')
