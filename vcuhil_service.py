@@ -177,7 +177,6 @@ async def run(state):
                 'measurement': name,
                 'tags': tags,
             }]
-            print(ts_data_influx)
             influx_client = InfluxDBClient('localhost', 8086, 'vcuhil', 'vcuhil_password123', 'vcuhil')
             influx_client.write_points(ts_data_influx)
 
