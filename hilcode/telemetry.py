@@ -12,8 +12,8 @@ class TelemetryJsonLine(object):
         :param dump: JSON string
         """
         self.telemetry = []
-        for line in dump:
-            for timestamp, value in line:
+        for timestamp, lines in dump[0].items():
+            for value in lines:
                 if value['type'] == 'default':
                     tc = TelemetryPoint(value['name'], timestamp, value['value'])
                 elif value['type'] == 'string':
