@@ -15,6 +15,7 @@ import sys
 import json
 import pprint
 import datetime
+from influxdb import InfluxDBClient
 from aiohttp import web
 
 DEBUG = False
@@ -97,6 +98,25 @@ async def execute_command(state, curr_command):
     else:
         RuntimeError(f'Operation {curr_command.operation} not recognized.')
 
+def tags_compute(name):
+    tags = name.split('.')
+    if len(tags) == 2:
+        return (tags[-1], {
+            'HIL': tags[0]
+        })
+    elif len(tags) == 3:
+        return (tags[-1], {
+            'HIL': tags[0],
+            'VCU': tags[1],
+        })
+    else:
+        return (tags[-1], {
+            'HIL': tags[0],
+            'VCU': tags[1],
+            'subcomponent': tags[2],
+        })
+
+
 # Loop (every second)
 async def run(state):
     """
@@ -140,26 +160,26 @@ async def run(state):
     # Write telem to log file
     for timestamp, tpoints in ts_data.items():
         for tpoint in tpoints:
+            name, tags = tags_compute(tpoint['name'])
             if tpoint['type'] == 'unit':
-                values = {tpoint['name']: float(tpoint['value'])}
+                value = float(tpoint['value'])
             elif tpoint['type'] =='string':
-                values = {tpoint['name']: str(tpoint['value'])}
+                value = str(tpoint['value'])
             elif tpoint['type'] == 'boolean':
-                values = {tpoint['name']: bool(tpoint['value'])}
+                value = bool(tpoint['value'])
             else:
                 raise RuntimeError('type not recognized')
-            ts_data_prejson = {
-                '@timestamp': datetime.datetime.utcfromtimestamp(timestamp).isoformat(),
-                'values': values,
-                'name': tpoint['name'],
-                'type': tpoint['type'],
-                'tags': tpoint['name'].split('.'),
-                'user': 'vcuhil',
-            }
-            ts_data_json = json.dumps(ts_data_prejson)
-            with open(log_filename, 'a') as lf:
-                #print(f'{ts_data_json}')
-                lf.write(f'{ts_data_json}\n')
+            ts_data_influx = [{
+                'time': datetime.datetime.utcfromtimestamp(timestamp).isoformat(),
+                'fields': {
+                    'value': value
+                },
+                'measurement': name,
+                'tags': tags,
+            }]
+            print(ts_data_influx)
+            influx_client = InfluxDBClient('localhost', 8086, 'vcuhil', 'vcuhil_password123', 'vcuhil')
+            influx_client.write_points(ts_data_influx)
 
     # Return state for next processing round
     log.debug('End cycle')
@@ -267,11 +287,11 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--parser_port',
-        default=8080
+        default=6060
     )
     parser.add_argument(
         '--telem_port',
-        default=8888
+        default=6666
     )
     args = parser.parse_args()
     try:

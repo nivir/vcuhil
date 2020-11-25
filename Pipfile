@@ -12,6 +12,7 @@ pint = "*"
 telnetlib3 = "*"
 pyserial-asyncio = "*"
 aiohttp = "*"
+influxdb = "*"
 
 [requires]
 python_version = "3.9"
