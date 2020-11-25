@@ -470,8 +470,8 @@ if __name__=='__main__':
     parser.add_argument('command', default=None, type=str, help='(optional) Command of action', nargs='?')
     parser.add_argument('setpoint', default=None, type=float, help='(optional) Setpoint of action', nargs='?')
     parser.add_argument('--host', default='localhost', type=str, help='Host for HIL service')
-    parser.add_argument('--cmd_port', default=8080, type=int, help='Host port for commanding HIL')
-    parser.add_argument('--telem_port', default=8888, type=int, help='Host port for commanding HIL')
+    parser.add_argument('--cmd_port', default=6060, type=int, help='Host port for commanding HIL')
+    parser.add_argument('--telem_port', default=6666, type=int, help='Host port for commanding HIL')
 
     args = parser.parse_args()
     main(args)
