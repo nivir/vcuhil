@@ -153,11 +153,11 @@ async def run(state):
     log.debug('Telem to http')
     # Telem Out
     if tlm_queue.full():
-        await tlm_queue.get()
+        tlm_queue.get_nowait()
     tlm_queue.put_nowait(ts_data)
     log.debug('Telem to file')
 
-    # Write telem to log file
+    # Write telem to influx
     for timestamp, tpoints in ts_data.items():
         for tpoint in tpoints:
             name, tags = tags_compute(tpoint['name'])
