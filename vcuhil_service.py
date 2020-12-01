@@ -169,14 +169,14 @@ async def run(state):
                 value = bool(tpoint['value'])
             else:
                 raise RuntimeError('type not recognized')
-            ts_data_influx = {
+            ts_data_influx = [{
                 'time': datetime.datetime.utcfromtimestamp(timestamp).isoformat(),
                 'fields': {
                     'value': value
                 },
                 'measurement': name,
                 'tags': tags,
-            }
+            }]
             influx_client = InfluxDBClient('localhost', 8086, 'vcuhil', 'vcuhil_password123', 'vcuhil')
             influx_client.write_points(ts_data_influx)
 

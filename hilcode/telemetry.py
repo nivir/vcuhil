@@ -29,6 +29,7 @@ class TelemetryJsonLine(object):
                         raise RuntimeError('Telemetry type not recognized')
                     self.telemetry.append(tc)
 
+
     def __str__(self):
         """
         Produce a JSON representation of telemetry data.
