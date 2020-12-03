@@ -12,21 +12,23 @@ class TelemetryJsonLine(object):
         :param dump: JSON string
         """
         self.telemetry = []
-        for timestamp, lines in dump[0].items():
-            for value in lines:
-                if value['type'] == 'default':
-                    tc = TelemetryPoint(value['name'], timestamp, value['value'])
-                elif value['type'] == 'string':
-                    tc = StringTelemetryPoint(value['name'], timestamp, value['value'])
-                elif value['type'] == 'boolean':
-                    tc = BooleanTelemetryPoint(value['name'], timestamp, value['value'])
-                elif value['type'] == 'float':
-                    tc = FloatTelemetryPoint(value['name'], timestamp, value['value'])
-                elif value['type'] == 'unit':
-                    tc = UnitTelemetryPoint(value['name'], timestamp, value['value'], value['unit'])
-                else:
-                    raise RuntimeError('Telemetry type not recognized')
-                self.telemetry.append(tc)
+        if dump != '':
+            for line in dump:
+                for timestamp, value in line:
+                    if value['type'] == 'default':
+                        tc = TelemetryPoint(value['name'], timestamp, value['value'])
+                    elif value['type'] == 'string':
+                        tc = StringTelemetryPoint(value['name'], timestamp, value['value'])
+                    elif value['type'] == 'boolean':
+                        tc = BooleanTelemetryPoint(value['name'], timestamp, value['value'])
+                    elif value['type'] == 'float':
+                        tc = FloatTelemetryPoint(value['name'], timestamp, value['value'])
+                    elif value['type'] == 'unit':
+                        tc = UnitTelemetryPoint(value['name'], timestamp, value['value'], value['unit'])
+                    else:
+                        raise RuntimeError('Telemetry type not recognized')
+                    self.telemetry.append(tc)
+
 
     def __str__(self):
         """
