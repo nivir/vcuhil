@@ -1,5 +1,6 @@
 import asyncio
 import asyncssh
+import socket
 import logging
 
 log = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class VCUSGA(object):
             except OSError:
                 self._pinger_connected.clear()
             except Exception as e:
-                log.error(f'WTF HPA ERROR!!! {e}')
+                log.error(f'WTF HPA ERROR!!! {e.format_exc()}')
                 raise e
 
     async def setup(self):
