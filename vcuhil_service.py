@@ -257,18 +257,26 @@ async def main(args):
 
     log.debug(f'Starting up json server on port {args["parser_port"]}')
 
+    timeout_count = 0
     # Main loop
-    while not state['done']:
-        log.debug('Launching new task')
-        task = asyncio.create_task(run(state))
-        log.debug('Waiting for Task to end')
-        await asyncio.sleep(CYCLE_TIME)
-        log.debug('Task should have ended by now....')
-        while not task.done():
-            log.debug('Task did not end, wait for it to end')
+    try:
+        while not state['done']:
+            log.debug('Launching new task')
+            task = asyncio.create_task(run(state))
+            log.debug('Waiting for Task to end')
             await asyncio.sleep(CYCLE_TIME)
-        log.debug('Task Complete, saving results')
-        state = task.result()
+            log.debug('Task should have ended by now....')
+            while not task.done():
+                timeout_count += 1
+                log.debug('Task did not end, wait for it to end')
+                await asyncio.sleep(CYCLE_TIME)
+                if timeout_count > 100:
+                    log.warning('Task blocked too long, waited timeout period')
+                    task.cancel()
+            log.debug('Task Complete, saving results')
+            state = task.result()
+    except asyncio.CancelledError as e:
+        raise e
 
     # No longer running, 'done' called
     log.info('Service Terminated')
